@@ -4,11 +4,7 @@ import pandas as pd
 import re
 from _constant_func import *
 
-
-
-
-# Example usage
-local_directory = "/mnt/data/nafiz43/projects/ReACT-GPT/data/Paper-Set/FSE/FSE 09"
+local_directory = "/mnt/data/nafiz43/projects/ReACT-GPT/data/Paper-Set/"
 pdf_files = get_pdfs(local_directory)
 
 # print(pdf_files)

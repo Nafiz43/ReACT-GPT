@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 
 # Load the CSV file
-df = pd.read_csv('local_history/IP0llama3.2:latest-12025-03-27 17:10.csv')
+df = pd.read_csv('local_history/IP0llama3.3:70b-12025-03-28 04:34.csv')
 
 # Prepare a list to store structured data
 structured_data = []
