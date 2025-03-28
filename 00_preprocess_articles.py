@@ -8,10 +8,10 @@ from _constant_func import *
 
 
 # Example usage
-local_directory = "/home/nafiz/Documents/ReACT-GPT/data"
+local_directory = "/mnt/data/nafiz43/projects/ReACT-GPT/data/Paper-Set/FSE/FSE 09"
 pdf_files = get_pdfs(local_directory)
 
-
+# print(pdf_files)
 
 master_df = pd.DataFrame()
 
@@ -35,6 +35,8 @@ for pdf in pdf_files:
     master_df = pd.concat([master_df, parse_article(pdf)], ignore_index=True)
     print("Processed", cnt, "out of ", len(pdf_files), "articles", end="\r")
     cnt = cnt+1
+
+os.makedirs('data/', exist_ok=True)
 
 master_df.to_csv('data/article_data.csv', index=False)
 
