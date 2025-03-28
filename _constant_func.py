@@ -232,7 +232,7 @@ def extract_article_title(markdown_text):
 
 def clean_article_text(text):
     """Removes everything after '### ACKNOWLEDGMENTS' or '### REFERENCES' (case-insensitive)."""
-    pattern = r'(?i)### (ACKNOWLEDGMENTS|REFERENCES).*'  # Case-insensitive match
+    pattern = r'(?i)### (ACKNOWLEDGMENTS|REFERENCES|ACKNOWLEDGMENT|REFERENCE).*'  # Case-insensitive match
     return re.sub(pattern, '', text, flags=re.DOTALL).strip()
 
 def extract_article_link(text):
