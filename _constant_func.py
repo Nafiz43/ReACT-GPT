@@ -205,13 +205,15 @@ def clean_response(response):
         try:
             extracted_json = json_part.group()  # Get the full JSON content
             parsed_json = json.loads(extracted_json)  # Convert the JSON string into a Python dictionary
-            # print(parsed_json)
+            print(parsed_json)
         except:
             print(f"Error decoding JSON:")
     else:
         parsed_json = response
         print("No valid JSON found in the response.")
 
+    if(parsed_json==None):
+        parsed_json = {'message': 'NO ACTIONABLE CAN BE DERIVED'}
     return parsed_json
 
 
