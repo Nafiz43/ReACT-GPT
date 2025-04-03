@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 
 # Load the CSV file
-df = pd.read_csv('local_history/IP0llama3.3:70b-12025-03-28 04:34.csv')
+df = pd.read_csv('local_history/CoT0llama3.3:70b102025-04-03 03:32.csv')
 
 # Prepare a list to store structured data
 structured_data = []
@@ -10,6 +10,7 @@ structured_data = []
 # Iterate over rows in the DataFrame
 for _, row in df.iterrows():
     article_title = row['article_title']
+    article_venue = row['venue']
     
     # Safely parse the answer column (which contains a dictionary)
     try:
@@ -20,6 +21,7 @@ for _, row in df.iterrows():
         for rec in recommendations:
             structured_data.append({
                 'article_title': article_title,
+                'article_venue': article_venue,
                 'recommendation': rec.get('recommendation', ''),
                 'positive_impact': rec.get('positive_impact', 'NO IMPACT FOUND'),
                 'evidence': rec.get('evidence', 'NO EVIDENCE FOUND'),
