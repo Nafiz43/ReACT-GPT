@@ -169,7 +169,7 @@ allowable_models = ["meta.llama3-1-405b-instruct-v1:0", "anthropic.claude-3-5-ha
                       "anthropic.claude-v2", "meta.llama3-1-70b-instruct-v1:0", "deepseek-r1:1.5b",
                       "llama3.2:3b-instruct-q4_K_M", "mixtral:8x7b-instruct-v0.1-q4_K_M", "qordmlwls/llama3.1-medical:latest",
                       "medllama2:latest", "meditron:70b", "llama3.2:latest", "anthropic.claude-3-7-sonnet-20250219-v1:0", 
-                      "anthropic.claude-3-5-sonnet-20241022-v2:0", "tinyllama", "llama3.3:70b",
+                      "anthropic.claude-3-5-sonnet-20241022-v2:0", "tinyllama", "llama3.3:70b", "qwen2.5:72b",
                         "deepseek-r1:7b", "thewindmom/llama3-med42-8b:latest", "mixtral:latest"]
 
 allowable_prompting_methods = ["IP", "CoT", "RA"]

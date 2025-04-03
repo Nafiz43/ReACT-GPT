@@ -13,7 +13,7 @@ from _constant_func import *
 
 
 # data = pd.read_csv('data/Labeled/labels_v2.csv')
-data = pd.read_csv('data/article_data.csv')
+data = pd.read_csv('data/article_data_FSE.csv')
 total_report_count = len(data)
 # data = data[83:]
 
@@ -87,7 +87,7 @@ def main(model_name, prompting_method, reports_to_process, temp):
     if not os.path.isfile(log_path):
         with open(log_path, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
-            writer.writerow(["timestamp", "article_title", "answer","model_name"])
+            writer.writerow(["timestamp", "venue", "article_title", "answer","model_name"])
 
     cnt = 1
     # print(questions)
@@ -105,7 +105,7 @@ def main(model_name, prompting_method, reports_to_process, temp):
         with open(log_path, mode="a", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                writer.writerow([timestamp, extract_article_title(row['Text']), response, model_name])
+                writer.writerow([timestamp, row['File-path'], extract_article_title(row['Text']), response, model_name])
                 print("Article Processing Completed", cnt, end="\r")
 
         cnt = cnt+1

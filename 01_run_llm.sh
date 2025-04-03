@@ -7,7 +7,7 @@
 # mixtral:8x7b-instruct-v0.1-q4_K_M 
 # llama3.3:70b
 # medllama2:latest
-# qwen2.5:70b
+# qwen2.5:72b
 # thewindmom/llama3-med42-8b:latest
 
 # Prompt Techniqyes:
@@ -23,7 +23,7 @@ python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting
 
 python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=IP --reports_to_process=-1 >> log-files/llama3.3_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=qwen2.5:70b --prompting_method=IP --reports_to_process=-1 >> log-files/qwen2.5_IP_temp0.txt
+python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=IP --reports_to_process=-1 >> log-files/qwen2.5_IP_temp0.txt
 
 python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=IP --reports_to_process=-1 log-files/llama3med42_IP_temp0.txt
 
@@ -37,7 +37,7 @@ python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting
 
 python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=CoT --reports_to_process=-1  >> log-files/llama3.3_CoT_temp0.txt
 
-python3 01_run_llm.py --model_name=qwen2.5:70b --prompting_method=CoT --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp0.txt
+python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=CoT --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp0.txt
 
 python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=CoT --reports_to_process=-1 >> log-files/llama3med42_CoT_temp0.txt
 
@@ -51,7 +51,7 @@ python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting
 
 python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/llama3.3_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=qwen2.5:70b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp1.txt
+python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp1.txt
 
 python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=CoT --temp=1 --reports_to_process=-1 >>log-files/llama3med42_CoT_temp1.txt
 
