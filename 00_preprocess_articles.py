@@ -4,7 +4,7 @@ import pandas as pd
 import multiprocessing as mp
 from _constant_func import *
 import signal
-
+import csv
 
 def timeout_handler(signum, frame):
     print("Warning: The function took too long but will continue.")
@@ -34,6 +34,7 @@ def parse_article(pdf_path):
     try:
         # markdown_text = pymupdf4llm.to_markdown(pdf_path)
         try:
+            print("starts processing:", article_path)
             markdown_text = pymupdf4llm.to_markdown(pdf_path)
         except:
             signal.alarm(0)  # Always cancel the alarm
@@ -42,10 +43,10 @@ def parse_article(pdf_path):
         cleaned_article_text = clean_article_text(markdown_text)
         article_title = extract_article_title(cleaned_article_text)
         article_link = extract_article_link(cleaned_article_text)
-        print(article_path)
+        print("ends processing:", article_path)
 
         return pd.DataFrame({
-            "Title": [article_title],
+            "Title": article_title,
             "Link": [article_link],
             "Text": [cleaned_article_text],
             "File-path": [article_path]
@@ -72,9 +73,21 @@ if __name__ == "__main__":
     with mp.Pool(processes=num_workers) as pool:
         results = []
         # Process files with error handling
+        cnt=1
         for result in pool.imap_unordered(process_and_save, pdf_files):
             if result is not None:
                 results.append(result)
+
+                # with open(output_csv, mode="a", newline="", encoding="utf-8") as file:
+                #     writer = csv.writer(file)
+                #     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                #     writer.writerow([result['Title'],result['Link'], result['Text'], result['File-path']])
+
+            if(cnt>=817):
+                final_df = pd.concat(results, ignore_index=True)
+                final_df.to_csv(output_csv, index=False)
+
+            cnt = cnt+1
 
     # Combine all results and write once
     if results:

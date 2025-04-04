@@ -2,7 +2,7 @@ import pandas as pd
 import ast
 
 # Load the CSV file
-df = pd.read_csv('local_history/CoT0llama3.3:70b102025-04-03 03:32.csv')
+df = pd.read_csv('local_history/CoT0llama3.3:70b102025-04-03 20:09.csv')
 
 # Prepare a list to store structured data
 structured_data = []
@@ -11,6 +11,7 @@ structured_data = []
 for _, row in df.iterrows():
     article_title = row['article_title']
     article_venue = row['venue']
+    article_link = row['article_link'] if 'article_link' in row else ''  # Handle missing column gracefully
     
     # Safely parse the answer column (which contains a dictionary)
     try:
@@ -21,6 +22,7 @@ for _, row in df.iterrows():
         for rec in recommendations:
             structured_data.append({
                 'article_title': article_title,
+                'article_link': article_link, 
                 'article_venue': article_venue,
                 'recommendation': rec.get('recommendation', ''),
                 'positive_impact': rec.get('positive_impact', 'NO IMPACT FOUND'),

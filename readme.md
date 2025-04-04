@@ -148,9 +148,14 @@ However, if you want to see block-by-block output from the code, do the followin
 ## For running Ollama from pre-built binary:
 1. To start the server in background:
 ```
-    ./ollama serve&
+    OLLAMA_MODELS=/mnt/data/nafiz43 ./ollama serve&
 ```
 2. run a local model afterwards
 ```
     ./ollama run llama2
 ```
+3. To kill the ollama server:
+```
+   pkill ollama
+```
+
