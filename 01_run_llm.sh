@@ -15,19 +15,19 @@
 # CoT
 # CoT (with Self-Consistency)
 
-python3 01_run_llm.py --model_name=llama3.2:latest --prompting_method=IP --reports_to_process=-1 
+# python3 01_run_llm.py --model_name=llama3.2:latest --prompting_method=IP --reports_to_process=-1 
 
-python3 01_run_llm.py --model_name=medllama2:latest --prompting_method=IP --reports_to_process=-1 >> log-files/medllama2_IP_temp0.txt
+# python3 01_run_llm.py --model_name=medllama2:latest --prompting_method=IP --reports_to_process=-1 >> log-files/medllama2_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting_method=IP --reports_to_process=-1  >> log-files/mixtral_IP_temp0.txt
+# python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting_method=IP --reports_to_process=-1  >> log-files/mixtral_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=IP --reports_to_process=-1 >> log-files/llama3.3_IP_temp0.txt
+# python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=IP --reports_to_process=-1 >> log-files/llama3.3_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=IP --reports_to_process=-1 >> log-files/qwen2.5_IP_temp0.txt
+# python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=IP --reports_to_process=-1 >> log-files/qwen2.5_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=IP --reports_to_process=-1 log-files/llama3med42_IP_temp0.txt
+# python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=IP --reports_to_process=-1 log-files/llama3med42_IP_temp0.txt
 
-python3 01_run_llm.py --model_name=anthropic.claude-3-5-haiku-20241022-v1:0 --prompting_method=IP --reports_to_process=-1 >> log-files/claude_haiku_IP_temp0.txt
+# python3 01_run_llm.py --model_name=anthropic.claude-3-5-haiku-20241022-v1:0 --prompting_method=IP --reports_to_process=-1 >> log-files/claude_haiku_IP_temp0.txt
 
 
 
@@ -45,17 +45,17 @@ python3 01_run_llm.py --model_name=anthropic.claude-3-5-haiku-20241022-v1:0 --pr
 
 
 
-python3 01_run_llm.py --model_name=medllama2:latest --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/medllama2_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=medllama2:latest --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/medllama2_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/mixtral_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=mixtral:8x7b-instruct-v0.1-q4_K_M --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/mixtral_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/llama3.3_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/llama3.3_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=qwen2.5:72b --prompting_method=CoT --temp=1 --reports_to_process=-1 >> log-files/qwen2.5_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=CoT --temp=1 --reports_to_process=-1 >>log-files/llama3med42_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=thewindmom/llama3-med42-8b:latest --prompting_method=CoT --temp=1 --reports_to_process=-1 >>log-files/llama3med42_CoT_temp1.txt
 
-python3 01_run_llm.py --model_name=anthropic.claude-3-5-haiku-20241022-v1:0 --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/claude_haiku_CoT_temp1.txt
+# python3 01_run_llm.py --model_name=anthropic.claude-3-5-haiku-20241022-v1:0 --prompting_method=CoT --temp=1 --reports_to_process=-1  >> log-files/claude_haiku_CoT_temp1.txt
 
 # Some older trials
 # python3 01_run_llm.py --model_name=mixtral:latest --reports_to_process=-1

@@ -200,6 +200,8 @@ def clean_response(response):
     # Step 4: Use regular expression to validate and extract the JSON content
     json_part = re.search(r'\{.*\}', json_text, re.DOTALL)
 
+    parsed_json=None
+
     # Step 5: Check if a JSON part was found and parse it
     if json_part:
         try:

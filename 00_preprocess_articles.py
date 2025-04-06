@@ -46,7 +46,7 @@ def parse_article(pdf_path):
         print("ends processing:", article_path)
 
         return pd.DataFrame({
-            "Title": article_title,
+            "Title": [article_title],
             "Link": [article_link],
             "Text": [cleaned_article_text],
             "File-path": [article_path]
@@ -83,7 +83,7 @@ if __name__ == "__main__":
                 #     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 #     writer.writerow([result['Title'],result['Link'], result['Text'], result['File-path']])
 
-            if(cnt>=817):
+            if(cnt>=800):
                 final_df = pd.concat(results, ignore_index=True)
                 final_df.to_csv(output_csv, index=False)
 
