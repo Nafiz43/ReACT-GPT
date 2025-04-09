@@ -1,8 +1,8 @@
 import pandas as pd
 import ast
 
-# Load the CSV file
-df = pd.read_csv('local_history/CoT0llama3.3:70b102025-04-03 20:09.csv')
+# Load the CSV file 
+df = pd.read_csv('local_history/CoT0llama3.3:70b-12025-04-03 21:04.csv') # Adjust the file path as needed
 
 # Prepare a list to store structured data
 structured_data = []
