@@ -20,6 +20,75 @@ You are a proficient literature reviewer. Given the full text of an article, you
 Full Text of the ARTICLE:
 """
 
+prompt_template_for_assigning_categories ="""
+You are a prolific literature reviewer analyzing practical suggestions—called actionables—to enhance the sustainability of Open Source Software (OSS) projects. You are provided with the following:
+
+i) A list of actionables (i.e., practical, targeted suggestions for improving OSS project sustainability),
+
+ii) A fixed set of Actionable Categories, each with a clear Category Definition and Criteria for Assignment.
+
+Your task is to assign the most appropriate criterion (from the predefined list under each category) to each actionable. Approach the task step by step.
+
+Instructions:
+1) Read the actionable carefully.
+
+2) Identify the category it fits best into by using the Category Definition.
+
+3) Match the actionable to one specific criterion under that category by reasoning through the Criteria for Assignment.
+
+4) Output only the criterion name that best matches the actionable. Do not output the the reasoning, or any explanatory text.
+
+5) If multiple criteria seem plausible, choose the most specific one.
+
+ReACT Categories and Criteria:
+\section{Definition of ReACT Categories}
+\subsection{New Contributor Onboarding and Involvement}
+\textit{Definition}. This category focuses on ensuring that new contributors can easily join, understand, and meaningfully contribute to the project.  
+
+\textit{Criteria for Assignment}: \textit{a)} Actionable facilitates the integration of new contributors by providing mentorship, onboarding materials, or simplifying the contribution process; \textit{b)} Actionable relates to improving project documentation or offering better support mechanisms for first-time contributors; \textit{c)} Actionable helps build a welcoming, inclusive, and open culture for new participants.
+
+
+\subsection{Code Standards and Maintainability}
+\textit{Definition}. This category deals with ensuring that the codebase adheres to established standards, making it easier to maintain and scale. It includes efforts to ensure code readability, modularity, and compliance with coding best practices.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable relates to improving the quality, readability, or structure of the codebase; \textit{b)} Actionable includes efforts to enforce coding guidelines, refactor code for better maintainability, or reduce technical debt; Actionable includes the use of linters, formatters, or static code analysis tools.
+
+
+\subsection{Automated Testing and Quality Assurance}
+\textit{Definition}. This category focuses on ensuring the project’s robustness and reliability through automated testing practices, such as unit, integration, and end-to-end tests. It also includes broader quality assurance activities.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable involves the implementation or improvement of automated testing frameworks and testing strategies; \textit{b)} Actionable includes practices that ensure the detection of bugs early in the development cycle and ensure high-quality releases; 
+
+
+\subsection{Community Collaboration and Engagement}
+\textit{Definition}. This category deals with activities that foster collaboration, communication, and engagement within the OSS community. It includes practices for keeping the community active and involved.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable aims to improve communication between contributors, maintainers, and users; Actionable involves organizing community-driven events, discussions, or collaborations, as well as platforms to enhance transparency and teamwork; Actionable relates to tools and processes for better community governance and decision-making.
+
+\subsection{Documentation Practices}
+\textit{Definition}. This category focuses on ensuring that the project’s documentation is thorough, up-to-date, and easily accessible. Documentation practices are crucial for both current and future contributors.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable focuses on improving the quality, clarity, or accessibility of project documentation, such as user guides, API references, or contributor guides; \textit{b)} Actionable includes practices for keeping documentation synchronized with the codebase and ensuring it meets the needs of different stakeholders; \textit{c)} Actionable involves translation efforts or making documentation more accessible to non-expert audiences.
+
+\subsection{Project Management and Governance}
+\textit{Definition}. This category deals with the governance structure and project management practices that keep the project organized, transparent, and sustainable over the long term. 
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable enhances the governance model, clarifies roles and responsibilities, or improves the decision-making process; \textit{b)} Actionable involves defining or refining processes for issue triaging, release management, or conflict resolution; \textit{c)} Actionable includes efforts to improve the transparency of project goals, progress, and decision-making.
+
+
+\subsection{Security Best Practices and Legal Compliance}
+\textit{Definition}. This category addresses efforts to secure the project and ensure compliance with relevant legal standards, such as licenses, data privacy laws, and security protocols.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable focuses on improving the security posture of the project by following best practices, addressing vulnerabilities, or conducting audits; \textit{b)} Actionable involves ensuring compliance with open-source licenses, setting up contributor license agreements (CLAs), or aligning with data privacy regulations; \textit{c)} Actionable includes security measures such as dependency management, security audits, and secure coding practices.
+
+\subsection{CI/CD and DevOps Automation}
+\textit{Definition}. This category deals with continuous integration and continuous deployment (CI/CD) processes that automate building, testing, and deployment pipelines. It also includes broader DevOps automation tasks.
+
+\textit{Criteria for Assignment}. \textit{a)} Actionable involves the setup or enhancement of CI/CD pipelines to ensure faster, reliable, and automated releases; \textit{b)} Actionable relates to automating infrastructure provisioning, containerization, or deployment to cloud environments; \textit{c)} Actionable includes the integration of DevOps practices that ensure smooth, automated, and repeatable processes for software development, testing, and deployment.
+
+ACTIONABLE:
+"""
+
 
 
 CoT_template = """
