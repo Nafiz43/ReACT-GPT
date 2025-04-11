@@ -18,6 +18,21 @@ data = pd.read_csv('data/structured_output.csv')
 total_report_count = len(data)
 # data = data[83:]
 
+category_cleaning_prompt = """
+You are given a *category label* that may be noisy, ambiguous, or loosely defined. Your task is to clean and standardize it by mapping it to one of the following predefined high-level categories:
+
+1. New Contributor Onboarding and Involvement  
+2. Code Standards and Maintainability  
+3. Automated Testing and Quality Assurance  
+4. Community Collaboration and Engagement  
+5. Documentation Practices  
+6. Project Management and Governance  
+7. Security Best Practices and Legal Compliance  
+8. CI/CD and DevOps Automation 
+
+<NOTE: Please provide only the category name without any additional text or explanation; Please do not even include the bullet numbering.>
+Here is the given text: """
+
 
 
 @click.command()
@@ -100,6 +115,9 @@ def main(model_name, prompting_method, reports_to_process, temp):
         ollama = Ollama(model=model_name, temperature=temp)
         logging.getLogger().setLevel(logging.ERROR)  
         response = ollama.invoke(query)
+
+        response = ollama.invoke(category_cleaning_prompt+response)
+         
         # row['category'] = response 
         # response = dummy_response
         # response = clean_response(response)
