@@ -14,7 +14,7 @@ from _constant_func import *
 
 # data = pd.read_csv('data/Labeled/labels_v2.csv')
 # data = pd.read_csv('data/ground_truth_data.csv')
-data = pd.read_csv('local_history/CategoryAssignment-CoT0llama3.3_70b-12025-04-10 02_46.csv')
+data = pd.read_csv('local_history/CategoryAssignment-CoT0llama3.3:70b-12025-04-10 02:46.csv')
 total_report_count = len(data)
 # data = data[83:]
 
