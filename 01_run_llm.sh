@@ -1,3 +1,5 @@
+# Developed at DECAL Lab in CS Department @ UC Davis by Nafiz Imtiaz Khan (nikhan@ucdavis.edu)
+# Copyright © 2025 The Regents of the University of California, Davis campus. All Rights Reserved. Used with permission.
 # This file contains some example run commands
 # --reports_to_process=-1 means it will process all the reports in the dataset; 
 # provide a valid number to process that many reports
