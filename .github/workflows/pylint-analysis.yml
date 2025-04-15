@@ -1,6 +1,5 @@
 name: Python Lint with Pylint
 
-# Trigger the workflow on push or pull request events for the main branch
 on:
   push:
     branches: ["main", "master"] 
@@ -29,10 +28,13 @@ jobs:
 
     - name: Run Pylint
       run: |
-        pylint your_project_directory/ > pylint_report.txt || true
+        pylint . > pylint_report.txt || true
+
+    - name: List files for debug
+      run: ls -l
 
     - name: Upload Pylint Report
-      uses: actions/upload-artifact@v3.1.2
+      uses: actions/upload-artifact@v4
       with:
         name: pylint-report
         path: pylint_report.txt
