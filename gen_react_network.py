@@ -342,13 +342,26 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
-    :root {
+    :root,[data-theme="light"] {
       --bg:#f2f6fc; --surface:#fff; --surface2:#f8fafd; --border:#dbe4f0;
       --text:#0f172a; --muted:#64748b; --accent:#2563eb;
       --cat:#6baed6; --action:#fb6a4a;
       --shadow:0 8px 28px rgba(15,23,42,.09);
+      --net-bg:linear-gradient(160deg,#f8fbff 0%,#eef4fb 100%);
+      --net-glass:rgba(255,255,255,.88);
+      --stab-bg:rgba(242,246,252,.88);
+    }
+    [data-theme="dark"] {
+      --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+      --text:#e6edf3; --muted:#7d8590; --accent:#58a6ff;
+      --cat:#5b9bd5; --action:#f97316;
+      --shadow:0 8px 28px rgba(0,0,0,.55);
+      --net-bg:radial-gradient(ellipse at 50% 40%,#1a2035 0%,#0d1117 100%);
+      --net-glass:rgba(22,27,34,.88);
+      --stab-bg:rgba(13,17,23,.88);
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{transition:background .25s,color .25s}
     html,body{height:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;
               background:var(--bg);color:var(--text)}
 
@@ -397,7 +410,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     /* stabilisation overlay */
     .stab-overlay{position:absolute;inset:0;display:flex;flex-direction:column;
                   align-items:center;justify-content:center;gap:12px;z-index:6;
-                  background:rgba(242,246,252,.88);backdrop-filter:blur(4px);
+                  background:var(--stab-bg);backdrop-filter:blur(4px);
                   transition:opacity .4s}
     .stab-overlay.hidden{opacity:0;pointer-events:none}
     .stab-spinner{width:36px;height:36px;border:3px solid var(--border);
@@ -411,16 +424,16 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
     /* network */
     .net-wrap{flex:1 1 0;min-height:0;position:relative;
-              background:linear-gradient(160deg,#f8fbff 0%,#eef4fb 100%)}
+              background:var(--net-bg)}
     #mynetwork{width:100%;height:100%}
     .net-toolbar{position:absolute;top:12px;left:12px;right:12px;display:flex;
                  justify-content:space-between;align-items:center;gap:10px;
                  pointer-events:none;z-index:4}
-    .net-summary{background:rgba(255,255,255,.88);backdrop-filter:blur(6px);
+    .net-summary{background:var(--net-glass);backdrop-filter:blur(6px);
                  border:1px solid var(--border);border-radius:10px;
                  padding:6px 12px;font-size:11px;color:var(--muted)}
     .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);
-            background:rgba(255,255,255,.88);backdrop-filter:blur(6px);
+            background:var(--net-glass);backdrop-filter:blur(6px);
             border:1px solid var(--border);border-radius:10px;padding:6px 12px}
     .legend-item{display:flex;align-items:center;gap:5px}
     .leg-dot{width:9px;height:9px;border-radius:50%}
@@ -555,6 +568,26 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .sim-bar-fill{height:100%;border-radius:99px;background:var(--accent);
                   transition:width .4s ease}
 
+    .theme-toggle{
+      flex-shrink:0;padding:6px 11px;border-radius:8px;font-size:15px;
+      border:1px solid var(--border);background:var(--surface2);
+      cursor:pointer;line-height:1;transition:border-color .15s,background .2s;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .theme-toggle:hover{border-color:var(--accent)}
+    [data-theme="dark"] .group-item.selected{background:#1c2d4a;border-color:#3b82f6;color:#93c5fd}
+    [data-theme="dark"] .badge{background:rgba(59,130,246,.2);color:#93c5fd}
+    [data-theme="dark"] .qbadge.yes{background:#0f2b1a;border-color:#22c55e;color:#4ade80}
+    [data-theme="dark"] .qbadge.no {background:#2b0f0f;border-color:#ef4444;color:#f87171}
+    [data-theme="dark"] .search-mode-banner.smb-semantic{background:#0f2b1a;border-color:#22c55e;color:#4ade80}
+    [data-theme="dark"] .search-mode-banner.smb-keyword {background:#0f1e3a;border-color:#3b82f6;color:#93c5fd}
+    [data-theme="dark"] .search-mode-banner.smb-fallback{background:#2b200a;border-color:#f59e0b;color:#fbbf24}
+    [data-theme="dark"] .search-mode-banner.smb-error   {background:#2b0f0f;border-color:#ef4444;color:#f87171}
+    [data-theme="dark"] .ai-pill.loading{border-color:#f59e0b;color:#fbbf24;background:#2b200a}
+    [data-theme="dark"] .ai-pill.ready  {border-color:#22c55e;color:#4ade80;background:#0f2b1a}
+    [data-theme="dark"] .ai-pill.error  {border-color:#ef4444;color:#f87171;background:#2b0f0f}
+    [data-theme="dark"] .tag-a{background:rgba(249,115,22,.2);color:#fb923c}
+    [data-theme="dark"] .tag-c{background:rgba(91,155,213,.2);color:#93c5fd}
     @media(max-width:960px){
       .app{flex-direction:column;height:auto}
       .main,.net-wrap{min-height:520px}
@@ -577,6 +610,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="stat-chip"><b id="scActions">0</b> actionables</div>
         <div class="stat-chip"><b id="scEdges">0</b> edges</div>
       </div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()"
+              title="Toggle dark / light mode" aria-label="Toggle theme">
+        <span id="themeIcon">☀️</span>
+      </button>
       <div class="ai-pill" id="aiPill">
         <span class="ai-dot"></span>
         <div class="ai-pill-body">
@@ -1202,7 +1239,27 @@ function esc(v) {
 }
 
 // ── boot ───────────────────────────────────────────────────────────────────────
+// -- theme ------------------------------------------------------------------
+function applyTheme(dark) {
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  var icon = document.getElementById("themeIcon");
+  if (icon) icon.textContent = dark ? "🌙" : "☀️";
+  if (network) network.setOptions({nodes:{font:{color: dark ? "#e6edf3" : "#1e293b"}}});
+}
+function toggleTheme() {
+  var next = document.documentElement.getAttribute("data-theme") !== "dark";
+  applyTheme(next);
+  try { localStorage.setItem("react_network_theme", next ? "dark" : "light"); } catch(e){}
+}
+
 (function boot() {
+  // Apply saved or OS theme preference before first paint
+  try {
+    var saved = localStorage.getItem("react_network_theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(saved ? saved === "dark" : prefersDark);
+  } catch(e) { applyTheme(false); }
+
   document.getElementById("scRows").textContent    = GRAPH_STATS.row_count;
   document.getElementById("scCats").textContent    = GRAPH_STATS.category_count;
   document.getElementById("scActions").textContent = GRAPH_STATS.actionable_count;
