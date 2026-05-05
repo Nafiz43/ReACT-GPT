@@ -112,4 +112,14 @@
 
 
 
-python3 01_run_llm.py --model_name=llama3.3:70b --prompting_method=CoT --reports_to_process=-1  >> log-files/llama3.3_CoT_temp0.txt
+# python3 01_run_llm.py --model_name=qwen2.5:72b-instruct --prompting_method=CoT --reports_to_process=2 >> log-files/qwen2.5:72b_CoT_temp0.txt
+
+# python3 01_run_llm.py --model_name=hengwen/DeepSeek-R1-Distill-Qwen-32B:q4_k_m --prompting_method=CoT --reports_to_process=2  >> log-files/DeepSeek-R1-Distill-Qwen-32B:q4_k_m.txt
+# ollama run gemma3:27b
+
+# python3 01_run_llm.py --model_name=gemma3:27b --prompting_method=CoT --reports_to_process=2  >> log-files/gemma3:27b.txt
+
+
+python3 01_run_llm.py --model_name=qwen3.6:35b --prompting_method=CoT --reports_to_process=-1 >> log-files/qwen3.6:35b_CoT_temp0.txt
+
+python3 01_run_llm.py --model_name=gpt-oss:20b --prompting_method=CoT --reports_to_process=-1>> log-files/gpt-oss:20b_CoT_temp0.txt

@@ -5,121 +5,191 @@ Copyright © 2025 The Regents of the University of California, Davis campus. All
 import os
 import logging
 import click
-import pandas as pd
 import csv
+import re
 from datetime import datetime
 from langchain_ollama import OllamaLLM as Ollama
-import json
-import re
+from tqdm import tqdm
 from _constant_func import *
 
-# import boto3
+
+MD_DIR = "/data/Deep_Angiography/ReACT-GPT/data/paper-set/processed-infer-set"
 
 
-# data = pd.read_csv('data/Labeled/labels_v2.csv')
-# data = pd.read_csv('data/ground_truth_data.csv')
-data = pd.read_csv('data/article_data.csv')
-total_report_count = len(data)
-# data = data[83:]
+# --------------------------------------------------------------------------- #
+#  MD parsing helpers                                                          #
+# --------------------------------------------------------------------------- #
+
+def load_md_files(md_dir: str) -> list[dict]:
+    """
+    Read all .md files in md_dir and parse them into article dicts.
+    Expected md structure written by 00_preprocess_articles.py:
+        # <Title>
+        
+        **Source:** <link>
+        **Original file:** <file_path>
+        
+        ---
+        
+        <body text>
+    """
+    articles = []
+    md_paths = sorted([
+        os.path.join(md_dir, f)
+        for f in os.listdir(md_dir)
+        if f.endswith(".md")
+    ])
+
+    for md_path in md_paths:
+        with open(md_path, "r", encoding="utf-8") as f:
+            raw = f.read()
+
+        # -- Title: first line starting with "# "
+        title_match = re.search(r"^#\s+(.+)$", raw, re.MULTILINE)
+        title = title_match.group(1).strip() if title_match else ""
+
+        # -- Source link
+        link_match = re.search(r"\*\*Source:\*\*\s*(.+)$", raw, re.MULTILINE)
+        link = link_match.group(1).strip() if link_match else ""
+
+        # -- Original file path
+        file_match = re.search(r"\*\*Original file:\*\*\s*(.+)$", raw, re.MULTILINE)
+        file_path = file_match.group(1).strip() if file_match else md_path
+
+        # -- Body: everything after the "---" divider
+        parts = raw.split("---\n", maxsplit=1)
+        body = parts[1].strip() if len(parts) > 1 else raw.strip()
+
+        articles.append({
+            "Title":     title,
+            "Link":      link,
+            "File-path": file_path,
+            "Text":      body,
+            "md_path":   md_path,
+        })
+
+    return articles
 
 
+# --------------------------------------------------------------------------- #
+#  CLI                                                                         #
+# --------------------------------------------------------------------------- #
 
 @click.command()
 @click.option(
     "--model_name",
     default="llama3.1:latest",
-    type=click.Choice(allowable_models),
-    help="model type, llama, mistral or non_llama",
+    type=str,
+    help="Ollama model to use for inference.",
 )
-
 @click.option(
     "--temp",
     default=0,
     type=int,
-    help="Randomness of the model",
+    help="Randomness of the model (temperature).",
 )
-
 @click.option(
     "--prompting_method",
     default="IP",
     type=click.Choice(allowable_prompting_methods),
-    help="here goes the prompting methods",
+    help="Prompting strategy: IP (Instruction), CoT (Chain-of-Thought), RA (Retrieval-Augmented).",
 )
-
-
 @click.option(
-    "--reports_to_process", 
-    default=-1,  # Default value
-    type=int, 
-    help="An extra integer to be passed via command line"
+    "--reports_to_process",
+    default=-1,
+    type=int,
+    help="Number of articles to process. -1 means all.",
 )
+@click.option(
+    "--md_dir",
+    default=MD_DIR,
+    type=click.Path(exists=True, file_okay=False),
+    help="Directory containing preprocessed .md files.",
+)
+def main(model_name, prompting_method, reports_to_process, temp, md_dir):
+    print(f"Model            : {model_name}")
+    print(f"Temperature      : {temp}")
+    print(f"Prompting method : {prompting_method}")
+    print(f"MD directory     : {md_dir}")
 
-def main(model_name, prompting_method, reports_to_process, temp):
-    print(f"Received model_name: {model_name}")
-    print(f"Received value for reports_to_process: {reports_to_process}")
-    print(f"Received value for prompting method: {prompting_method}")
-    print(f"Received value for Temperature: {temp}")
+    # -- Select question template
+    question = {
+        "IP":  IP_template,
+        "CoT": CoT_template,
+        "RA":  RA_template,
+    }[prompting_method]
 
+    # -- Load articles from .md files
+    articles = load_md_files(md_dir)
 
-    if(prompting_method =="IP"):
-        question = IP_template
-    elif(prompting_method=="CoT"):
-        question = CoT_template
-    elif(prompting_method=="RA"):
-        question = RA_template
+    if not articles:
+        print(f"No .md files found in {md_dir}. Exiting.")
+        return
 
+    if reports_to_process > 0:
+        articles = articles[:reports_to_process]
 
+    print(f"Articles to process: {len(articles)}")
 
-    global data 
-    global total_report_count 
-
-    if(reports_to_process > 0):
-        data = data.head(reports_to_process)
-        total_report_count = reports_to_process
-        print(f"Processing only {reports_to_process} reports")
-    else:
-        print(f"Processing {total_report_count} reports")
-
-
-    # Your existing logic to handle logging
-    log_dir, log_file = "local_history", f"{prompting_method+str(temp)+model_name+str(reports_to_process)+datetime.now().strftime('%Y-%m-%d %H:%M')}.csv"
-    
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
+    # -- Set up log CSV
+    log_dir = "local_history"
+    safe_model_name = re.sub(r"[/:\\]", "_", model_name)
+    log_file = (
+        f"{prompting_method}{temp}{safe_model_name}"
+        f"{reports_to_process}"
+        f"{datetime.now().strftime('%Y-%m-%d_%H-%M')}.csv"
+    )
+    os.makedirs(log_dir, exist_ok=True)
     log_path = os.path.join(log_dir, log_file)
 
-    if not os.path.isfile(log_path):
-        with open(log_path, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            writer.writerow(["timestamp", "venue", "article_title", "article_link", "answer","model_name"])
+    with open(log_path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "timestamp", "venue", "article_title",
+            "article_link", "answer", "model_name"
+        ])
 
-    cnt = 1
-    # print(questions)
+    # -- Inference loop
+    ollama = Ollama(model=model_name, temperature=temp)
+    logging.getLogger().setLevel(logging.ERROR)
 
-    for index, row in data.iterrows():
-        print("Article Number:", cnt, end="\r")
+    succeeded = 0
+    failed    = 0
 
-        query = prompt_template+row['Text']+question
-        ollama = Ollama(model=model_name, temperature=temp)
-        logging.getLogger().setLevel(logging.ERROR)  
-        response = ollama.invoke(query)
-        # response = dummy_response
-        response = clean_response(response)
-        
-        with open(log_path, mode="a", newline="", encoding="utf-8") as file:
-                writer = csv.writer(file)
-                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                writer.writerow([timestamp, row['File-path'], extract_article_title(row['Text']), row['Link'], response, model_name])
-                print("Article Processing Completed", cnt, end="\r")
+    with tqdm(articles, desc="Running inference", unit="article", dynamic_ncols=True) as pbar:
+        for article in pbar:
+            try:
+                query    = prompt_template + article["Text"] + question
+                response = ollama.invoke(query)
+                response = clean_response(response)
 
-        cnt = cnt+1
+                with open(log_path, mode="a", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        article["File-path"],
+                        article["Title"],
+                        article["Link"],
+                        response,
+                        model_name,
+                    ])
 
-    print("\nTotal Reports Processed", len(data))
+                succeeded += 1
+
+            except Exception as e:
+                tqdm.write(f"\nFailed on: {article.get('md_path', '?')} | {e}")
+                failed += 1
+
+            pbar.set_postfix({"done": succeeded, "failed": failed}, refresh=False)
+
+    print(f"\nTotal processed  : {succeeded}")
+    print(f"Total failed     : {failed}")
+    print(f"Log written to   : {log_path}")
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(message)s", level=logging.INFO
+        format="%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s - %(message)s",
+        level=logging.INFO,
     )
     main()
