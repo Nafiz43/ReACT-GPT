@@ -7,6 +7,7 @@ import logging
 import click
 import csv
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from datetime import datetime
 from langchain_ollama import OllamaLLM as Ollama
 from tqdm import tqdm
@@ -14,6 +15,8 @@ from _constant_func import *
 
 
 MD_DIR = "/data/Deep_Angiography/ReACT-GPT/data/paper-set/processed-infer-set"
+
+TIMEOUT_SECONDS = 600  # 10 minutes
 
 
 # --------------------------------------------------------------------------- #
@@ -111,6 +114,7 @@ def main(model_name, prompting_method, reports_to_process, temp, md_dir):
     print(f"Temperature      : {temp}")
     print(f"Prompting method : {prompting_method}")
     print(f"MD directory     : {md_dir}")
+    print(f"Timeout          : {TIMEOUT_SECONDS}s ({TIMEOUT_SECONDS // 60} min) per article")
 
     # -- Select question template
     question = {
@@ -150,17 +154,34 @@ def main(model_name, prompting_method, reports_to_process, temp, md_dir):
         ])
 
     # -- Inference loop
-    ollama = Ollama(model=model_name, temperature=temp)
+    # timeout=TIMEOUT_SECONDS guards at the HTTP/client level
+    ollama = Ollama(model=model_name, temperature=temp, timeout=TIMEOUT_SECONDS)
     logging.getLogger().setLevel(logging.ERROR)
 
     succeeded = 0
     failed    = 0
+    timed_out = 0
 
     with tqdm(articles, desc="Running inference", unit="article", dynamic_ncols=True) as pbar:
         for article in pbar:
             try:
-                query    = prompt_template + article["Text"] + question
-                response = ollama.invoke(query)
+                query = prompt_template + article["Text"] + question
+
+                # ThreadPoolExecutor acts as a hard safety net in case the
+                # HTTP-level timeout is swallowed internally by the client.
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(ollama.invoke, query)
+                    try:
+                        response = future.result(timeout=TIMEOUT_SECONDS)
+                    except FuturesTimeout:
+                        tqdm.write(
+                            f"\nTimed out ({TIMEOUT_SECONDS // 60} min) on: "
+                            f"{article.get('md_path', '?')}"
+                        )
+                        timed_out += 1
+                        failed += 1
+                        continue
+
                 response = clean_response(response)
 
                 with open(log_path, mode="a", newline="", encoding="utf-8") as f:
@@ -180,9 +201,13 @@ def main(model_name, prompting_method, reports_to_process, temp, md_dir):
                 tqdm.write(f"\nFailed on: {article.get('md_path', '?')} | {e}")
                 failed += 1
 
-            pbar.set_postfix({"done": succeeded, "failed": failed}, refresh=False)
+            pbar.set_postfix(
+                {"done": succeeded, "failed": failed, "timeout": timed_out},
+                refresh=False
+            )
 
     print(f"\nTotal processed  : {succeeded}")
+    print(f"Total timed out  : {timed_out}")
     print(f"Total failed     : {failed}")
     print(f"Log written to   : {log_path}")
 
