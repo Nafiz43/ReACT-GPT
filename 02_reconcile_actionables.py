@@ -133,8 +133,13 @@ STS_POSITIVE = 4.0   # clear paraphrases
 STS_NEGATIVE = 2.0   # clearly different
 
 # θ candidates to evaluate in the grid search
-THETA_GRID = [0.04, 0.06, 0.08, 0.10, 0.12, 0.15, 0.18, 0.20,
-              0.23, 0.25, 0.28, 0.30, 0.35, 0.40]
+# Phase-1 coarse grid: full range 0.01 → 0.95 in steps of 0.02.
+# This ensures we never miss a peak at either extreme.
+# Phase-2 fine grid: ±0.05 around the coarse best, step 0.005.
+# Both phases are built dynamically in calibrate_theta() — this
+# constant is kept only as a fallback if that function is bypassed.
+THETA_GRID = list(round(v, 3) for v in
+                  [x * 0.02 + 0.01 for x in range(48)])   # 0.01 … 0.95
 
 # Minimum number of distinct source models a cluster needs to be kept.
 # 1 = keep singletons (comprehensive); 2 = require cross-model corroboration.
@@ -300,29 +305,57 @@ def download_sts15() -> pd.DataFrame:
     return df
 
 
+def _score_theta(theta: float, sims: "pd.Series", gt: "pd.Series") -> dict:
+    """
+    Evaluate one θ value against ground-truth labels.
+
+    Returns a dict with theta, precision, recall, f1, tp, fp, fn.
+    This is factored out so both calibration phases can call it.
+    """
+    predicted_same = sims >= theta
+    tp = int(( predicted_same &  gt).sum())
+    fp = int(( predicted_same & ~gt).sum())
+    fn = int((~predicted_same &  gt).sum())
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+    recall    = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1        = (2 * precision * recall / (precision + recall)
+                 if (precision + recall) > 0 else 0.0)
+    return {"theta": theta, "precision": precision,
+            "recall": recall, "f1": f1,
+            "tp": tp, "fp": fp, "fn": fn}
+
+
 def calibrate_theta(sts_df: pd.DataFrame, chart_path: pathlib.Path) -> float:
     """
-    Grid-search θ over STS15 pairs to find the value that maximises F1.
+    Two-phase grid search to find the θ that maximises F1 on STS15.
 
-    HOW IT WORKS
-    ────────────
-    For each candidate θ in THETA_GRID:
+    WHY TWO PHASES?
+    ───────────────
+    A single fixed grid (e.g. 0.04–0.40) risks missing the true optimum
+    if it sits outside that range or in a gap between grid points.
 
-      1. For every STS pair, compute our text_similarity() on the two
-         sentences (using the same metric as the reconciliation pipeline).
+      Phase 1 — Coarse sweep: θ from 0.01 to 0.95 in steps of 0.02.
+                This covers the entire meaningful range and cannot miss
+                a peak at either extreme.
 
-      2. Predict "same cluster" if similarity ≥ θ, else "different".
+      Phase 2 — Fine zoom: ±0.05 around the Phase-1 best, step 0.005.
+                This finds the precise optimum within the promising region
+                to 3 decimal places.
 
-      3. Compare predictions to the ground truth derived from human scores:
-           • score ≥ STS_POSITIVE (4.0) → ground truth: SAME
-           • score ≤ STS_NEGATIVE (2.0) → ground truth: DIFFERENT
-           • 2.0 < score < 4.0          → excluded (ambiguous)
+    HOW SCORING WORKS
+    ─────────────────
+    For each θ we predict "same cluster" if our text_similarity() ≥ θ.
+    Ground truth comes from human STS scores:
+      • score ≥ STS_POSITIVE (4.0) → SAME   (clear paraphrases)
+      • score ≤ STS_NEGATIVE (2.0) → DIFFERENT
+      • 2.0 < score < 4.0          → excluded (genuinely ambiguous)
 
-      4. Compute Precision, Recall, F1 over the binary classification.
+    We maximise F1 = harmonic mean of Precision and Recall, which
+    balances avoiding false merges (precision) with catching all true
+    paraphrases (recall).
 
-    The θ with the highest F1 is selected and returned.  A chart is
-    saved so you can inspect the full precision-recall-F1 curve and
-    make an informed decision if you want to override the automatic pick.
+    The chart shows the full coarse curve plus a zoomed inset of the
+    fine phase so you can inspect the tradeoff and override if needed.
 
     Parameters
     ----------
@@ -331,7 +364,7 @@ def calibrate_theta(sts_df: pd.DataFrame, chart_path: pathlib.Path) -> float:
 
     Returns
     -------
-    Best θ (float)
+    Best θ (float, 3 decimal places)
     """
     print("\n── Calibration: computing text_similarity on STS pairs ──")
 
@@ -340,151 +373,201 @@ def calibrate_theta(sts_df: pd.DataFrame, chart_path: pathlib.Path) -> float:
         (sts_df["score"] >= STS_POSITIVE) | (sts_df["score"] <= STS_NEGATIVE)
     ].copy()
     clear_pairs["ground_truth"] = clear_pairs["score"] >= STS_POSITIVE
-    print(f"   Using {len(clear_pairs)} unambiguous pairs "
-          f"(≥{STS_POSITIVE} or ≤{STS_NEGATIVE}) out of {len(sts_df)} total")
+    n_same = int(clear_pairs["ground_truth"].sum())
+    n_diff = len(clear_pairs) - n_same
+    print(f"   Using {len(clear_pairs)} unambiguous pairs out of {len(sts_df)} total")
+    print(f"   Same (≥{STS_POSITIVE}): {n_same}  |  Different (≤{STS_NEGATIVE}): {n_diff}")
 
-    # Compute our similarity metric on every pair
-    sims = []
-    for _, row in clear_pairs.iterrows():
-        sims.append(text_similarity(row["sentence1"], row["sentence2"]))
-    clear_pairs["our_sim"] = sims
+    # Compute our similarity metric once for all pairs (reused in both phases)
+    print("   Computing similarities … ", end="", flush=True)
+    clear_pairs["our_sim"] = [
+        text_similarity(r["sentence1"], r["sentence2"])
+        for _, r in clear_pairs.iterrows()
+    ]
+    print("done")
 
-    # Grid search
-    results = []
-    print(f"\n   {'θ':>6}  {'Precision':>10}  {'Recall':>8}  {'F1':>8}  "
-          f"{'TP':>4}  {'FP':>4}  {'FN':>4}")
-    print("   " + "-" * 58)
+    sims = clear_pairs["our_sim"]
+    gt   = clear_pairs["ground_truth"]
 
-    for theta in THETA_GRID:
-        predicted_same = clear_pairs["our_sim"] >= theta
-        gt_same        = clear_pairs["ground_truth"]
+    # ── Phase 1: coarse sweep 0.01 → 0.95, step 0.02 ─────────────────────────
+    coarse_grid = [round(0.01 + i * 0.02, 3) for i in range(48)]   # 0.01 … 0.95
 
-        tp = int(( predicted_same &  gt_same).sum())
-        fp = int(( predicted_same & ~gt_same).sum())
-        fn = int((~predicted_same &  gt_same).sum())
+    print(f"\n   Phase 1 — Coarse sweep ({len(coarse_grid)} values: "
+          f"{coarse_grid[0]} → {coarse_grid[-1]}, step 0.02)")
+    print(f"   {'θ':>6}  {'Precision':>10}  {'Recall':>8}  {'F1':>8}  "
+          f"{'TP':>5}  {'FP':>5}  {'FN':>5}")
+    print("   " + "─" * 60)
 
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
-        recall    = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1        = (2 * precision * recall / (precision + recall)
-                     if (precision + recall) > 0 else 0.0)
+    coarse_results = []
+    for theta in coarse_grid:
+        row = _score_theta(theta, sims, gt)
+        coarse_results.append(row)
+        print(f"   {theta:>6.3f}  {row['precision']:>10.3f}  "
+              f"{row['recall']:>8.3f}  {row['f1']:>8.3f}  "
+              f"{row['tp']:>5}  {row['fp']:>5}  {row['fn']:>5}")
 
-        results.append({
-            "theta": theta,
-            "precision": precision,
-            "recall": recall,
-            "f1": f1,
-            "tp": tp, "fp": fp, "fn": fn,
-        })
-        print(f"   {theta:>6.3f}  {precision:>10.3f}  {recall:>8.3f}  "
-              f"{f1:>8.3f}  {tp:>4}  {fp:>4}  {fn:>4}")
+    coarse_df   = pd.DataFrame(coarse_results)
+    coarse_best = float(coarse_df.loc[coarse_df["f1"].idxmax(), "theta"])
+    coarse_f1   = float(coarse_df.loc[coarse_df["f1"].idxmax(), "f1"])
+    print(f"\n   Phase 1 best: θ = {coarse_best}  (F1 = {coarse_f1:.3f})")
 
-    results_df = pd.DataFrame(results)
-    best_row   = results_df.loc[results_df["f1"].idxmax()]
-    best_theta = float(best_row["theta"])
+    # ── Phase 2: fine zoom ±0.05 around coarse best, step 0.005 ──────────────
+    fine_lo   = max(0.001, round(coarse_best - 0.05, 3))
+    fine_hi   = min(0.999, round(coarse_best + 0.05, 3))
+    fine_grid = [round(fine_lo + i * 0.005, 3)
+                 for i in range(int((fine_hi - fine_lo) / 0.005) + 1)]
+
+    print(f"\n   Phase 2 — Fine zoom ({len(fine_grid)} values: "
+          f"{fine_grid[0]} → {fine_grid[-1]}, step 0.005)")
+    print(f"   {'θ':>6}  {'Precision':>10}  {'Recall':>8}  {'F1':>8}  "
+          f"{'TP':>5}  {'FP':>5}  {'FN':>5}")
+    print("   " + "─" * 60)
+
+    fine_results = []
+    for theta in fine_grid:
+        row = _score_theta(theta, sims, gt)
+        fine_results.append(row)
+        print(f"   {theta:>6.3f}  {row['precision']:>10.3f}  "
+              f"{row['recall']:>8.3f}  {row['f1']:>8.3f}  "
+              f"{row['tp']:>5}  {row['fp']:>5}  {row['fn']:>5}")
+
+    fine_df   = pd.DataFrame(fine_results)
+    fine_best_row = fine_df.loc[fine_df["f1"].idxmax()]
+    best_theta    = float(fine_best_row["theta"])
+    best_f1       = float(fine_best_row["f1"])
 
     print(f"\n   ★  Best θ = {best_theta}  "
-          f"(F1={best_row['f1']:.3f}, "
-          f"P={best_row['precision']:.3f}, "
-          f"R={best_row['recall']:.3f})")
+          f"(F1={best_f1:.3f}, "
+          f"P={fine_best_row['precision']:.3f}, "
+          f"R={fine_best_row['recall']:.3f})")
+    print(f"   (coarse best was {coarse_best}, fine search refined to {best_theta})")
 
     # ── Generate chart ────────────────────────────────────────────────────────
-    _plot_calibration(results_df, best_theta, chart_path, clear_pairs)
+    _plot_calibration(coarse_df, fine_df, best_theta, chart_path, clear_pairs)
 
     return best_theta
 
 
 def _plot_calibration(
-    results_df: pd.DataFrame,
+    coarse_df: pd.DataFrame,
+    fine_df: pd.DataFrame,
     best_theta: float,
     chart_path: pathlib.Path,
     sts_pairs: pd.DataFrame,
 ) -> None:
     """
-    Save a two-panel PNG showing:
-      Left  — Precision / Recall / F1 vs θ  (the main calibration curve)
-      Right — Histogram of our similarity scores split by ground truth label
+    Save a three-panel PNG:
+      Left   — Full coarse P/R/F1 curve (0.01 → 0.95, step 0.02)
+      Centre — Fine-zoom P/R/F1 curve  (±0.05 around best, step 0.005)
+      Right  — Histogram of similarity scores by ground truth label
 
-    The histogram lets you visually verify that the chosen θ sits in the
-    gap between the "same" and "different" score distributions.
+    Reading the chart:
+      • In the Left panel you see the global shape of the P/R tradeoff.
+        High θ → high precision (few false merges) but low recall (misses
+        many true paraphrases).  Low θ → the reverse.  F1 balances both.
+      • The Centre panel shows the precise optimum within the fine region.
+      • The Right panel confirms the chosen θ sits in the gap between the
+        "same" and "different" score distributions.  If the distributions
+        heavily overlap, the similarity metric itself needs improvement.
     """
     try:
         import matplotlib
-        matplotlib.use("Agg")   # non-interactive backend
+        matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        import matplotlib.patches as mpatches
+        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     except ImportError:
-        print("   [WARN] matplotlib not installed — skipping chart generation")
+        print("   [WARN] matplotlib not installed — skipping chart")
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.5))
-    fig.patch.set_facecolor("#0F1117")
+    BG    = "#0F1117"
+    PANEL = "#1A1D27"
+    GRID  = "#2A2D3A"
+    TICK  = "#AAAAAA"
+
+    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
+    fig.patch.set_facecolor(BG)
     for ax in axes:
-        ax.set_facecolor("#1A1D27")
-        ax.tick_params(colors="#AAAAAA", labelsize=9)
+        ax.set_facecolor(PANEL)
+        ax.tick_params(colors=TICK, labelsize=9)
         for spine in ax.spines.values():
             spine.set_edgecolor("#333344")
 
-    thetas     = results_df["theta"].values
-    precisions = results_df["precision"].values
-    recalls    = results_df["recall"].values
-    f1s        = results_df["f1"].values
+    def _draw_prf_panel(ax, df, title, mark_best=True):
+        """Draw P/R/F1 lines on ax from a results DataFrame."""
+        thetas = df["theta"].values
+        ax.plot(thetas, df["precision"].values, "o-", color="#4FC3F7",
+                lw=1.8, ms=4, label="Precision")
+        ax.plot(thetas, df["recall"].values,    "s-", color="#81C784",
+                lw=1.8, ms=4, label="Recall")
+        ax.plot(thetas, df["f1"].values,        "D-", color="#FFD54F",
+                lw=2.2, ms=5, label="F1", zorder=5)
+        if mark_best:
+            best_f1 = float(df.loc[df["theta"] == best_theta, "f1"].values[0])
+            ax.axvline(best_theta, color="#FF7043", lw=1.5,
+                       ls="--", alpha=0.9, label=f"Best θ={best_theta}")
+            ax.scatter([best_theta], [best_f1], color="#FF7043",
+                       s=100, zorder=6, edgecolors="white", lw=1)
+            # Annotation: position to avoid going off-chart
+            x_off = 0.015 if best_theta < (max(thetas) * 0.8) else -0.06
+            ax.annotate(f"θ={best_theta}\nF1={best_f1:.3f}",
+                        xy=(best_theta, best_f1),
+                        xytext=(best_theta + x_off, max(0.1, best_f1 - 0.14)),
+                        color="#FF7043", fontsize=8,
+                        arrowprops=dict(arrowstyle="->", color="#FF7043", lw=1))
+        ax.set_xlabel("Threshold θ", color="#CCCCCC", fontsize=10)
+        ax.set_ylabel("Score", color="#CCCCCC", fontsize=10)
+        ax.set_title(title, color="white", fontsize=11, fontweight="bold")
+        ax.set_ylim(-0.05, 1.05)
+        ax.set_xlim(min(thetas) - 0.01, max(thetas) + 0.01)
+        ax.legend(facecolor="#252836", edgecolor="#444455",
+                  labelcolor="white", fontsize=8)
+        ax.grid(True, color=GRID, lw=0.6, alpha=0.7)
 
-    # ── Left panel: calibration curves ───────────────────────────────────────
-    ax = axes[0]
-    ax.plot(thetas, precisions, "o-", color="#4FC3F7", linewidth=2,
-            markersize=5, label="Precision")
-    ax.plot(thetas, recalls,    "s-", color="#81C784", linewidth=2,
-            markersize=5, label="Recall")
-    ax.plot(thetas, f1s,        "D-", color="#FFD54F", linewidth=2.5,
-            markersize=6, label="F1", zorder=5)
+    # ── Left: full coarse curve ───────────────────────────────────────────────
+    # Check if best_theta is in coarse_df (it might only be in fine_df)
+    coarse_has_best = best_theta in coarse_df["theta"].values
+    _draw_prf_panel(
+        axes[0], coarse_df,
+        "Phase 1 — Coarse sweep\n(θ: 0.01 → 0.95, step 0.02)",
+        mark_best=coarse_has_best,
+    )
+    if not coarse_has_best:
+        # Still mark the coarse best for reference
+        coarse_best = float(coarse_df.loc[coarse_df["f1"].idxmax(), "theta"])
+        axes[0].axvline(coarse_best, color="#B0BEC5", lw=1, ls=":",
+                        alpha=0.7, label=f"Coarse peak θ={coarse_best}")
 
-    # Mark best θ
-    best_f1 = results_df.loc[results_df["theta"] == best_theta, "f1"].values[0]
-    ax.axvline(best_theta, color="#FF7043", linewidth=1.5,
-               linestyle="--", alpha=0.85, label=f"Best θ = {best_theta}")
-    ax.scatter([best_theta], [best_f1], color="#FF7043", s=120,
-               zorder=6, edgecolors="white", linewidths=1)
-    ax.annotate(f"θ = {best_theta}\nF1 = {best_f1:.3f}",
-                xy=(best_theta, best_f1),
-                xytext=(best_theta + 0.03, best_f1 - 0.12),
-                color="#FF7043", fontsize=9,
-                arrowprops=dict(arrowstyle="->", color="#FF7043", lw=1.2))
+    # ── Centre: fine zoom ─────────────────────────────────────────────────────
+    _draw_prf_panel(
+        axes[1], fine_df,
+        f"Phase 2 — Fine zoom\n(±0.05 around coarse peak, step 0.005)",
+        mark_best=True,
+    )
 
-    ax.set_xlabel("Threshold θ", color="#CCCCCC", fontsize=10)
-    ax.set_ylabel("Score", color="#CCCCCC", fontsize=10)
-    ax.set_title("θ Calibration on STS15\n(Precision / Recall / F1)",
-                 color="white", fontsize=11, fontweight="bold")
-    ax.set_ylim(-0.05, 1.05)
-    ax.set_xlim(min(thetas) - 0.01, max(thetas) + 0.01)
-    ax.legend(facecolor="#252836", edgecolor="#444455",
-              labelcolor="white", fontsize=9)
-    ax.grid(True, color="#2A2D3A", linewidth=0.6, alpha=0.7)
-
-    # ── Right panel: similarity score histogram by ground truth ───────────────
-    ax2 = axes[1]
-    same_sims  = sts_pairs.loc[ sts_pairs["ground_truth"], "our_sim"].values
-    diff_sims  = sts_pairs.loc[~sts_pairs["ground_truth"], "our_sim"].values
-    bins = np.linspace(0, max(sts_pairs["our_sim"].max(), 0.6), 25)
+    # ── Right: score distribution histogram ──────────────────────────────────
+    ax2 = axes[2]
+    same_sims = sts_pairs.loc[ sts_pairs["ground_truth"], "our_sim"].values
+    diff_sims = sts_pairs.loc[~sts_pairs["ground_truth"], "our_sim"].values
+    bins = np.linspace(0, max(float(sts_pairs["our_sim"].max()), 0.6), 30)
 
     ax2.hist(diff_sims, bins=bins, color="#EF5350", alpha=0.65,
              label=f"Different (score ≤ {STS_NEGATIVE})", edgecolor="#CC3333")
     ax2.hist(same_sims, bins=bins, color="#42A5F5", alpha=0.65,
              label=f"Same (score ≥ {STS_POSITIVE})", edgecolor="#1A5FAA")
-    ax2.axvline(best_theta, color="#FF7043", linewidth=2,
-                linestyle="--", label=f"Best θ = {best_theta}")
-
-    ax2.set_xlabel("Our text_similarity() score", color="#CCCCCC", fontsize=10)
+    ax2.axvline(best_theta, color="#FF7043", lw=2, ls="--",
+                label=f"Best θ = {best_theta}")
+    ax2.set_xlabel("text_similarity() score", color="#CCCCCC", fontsize=10)
     ax2.set_ylabel("Count", color="#CCCCCC", fontsize=10)
-    ax2.set_title("Score Distribution by Ground Truth Label\n"
-                  "(θ should sit in the gap between distributions)",
+    ax2.set_title("Score Distribution by Label\n"
+                  "(θ should sit in the gap)",
                   color="white", fontsize=11, fontweight="bold")
     ax2.legend(facecolor="#252836", edgecolor="#444455",
-               labelcolor="white", fontsize=9)
-    ax2.grid(True, color="#2A2D3A", linewidth=0.6, alpha=0.7)
+               labelcolor="white", fontsize=8)
+    ax2.grid(True, color=GRID, lw=0.6, alpha=0.7)
 
     fig.suptitle(
-        "Similarity Threshold (θ) Calibration — ModeX Actionable Reconciliation",
-        color="white", fontsize=13, fontweight="bold", y=1.01
+        "Two-Phase θ Calibration on STS15  —  ModeX Actionable Reconciliation",
+        color="white", fontsize=13, fontweight="bold", y=1.01,
     )
     plt.tight_layout()
     chart_path.parent.mkdir(parents=True, exist_ok=True)
