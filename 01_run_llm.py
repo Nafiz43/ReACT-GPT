@@ -16,7 +16,7 @@ from _constant_func import *
 
 MD_DIR = "/data/Deep_Angiography/ReACT-GPT/data/paper-set/processed-infer-set"
 
-TIMEOUT_SECONDS = 600  # 10 minutes
+TIMEOUT_SECONDS = 1800  # 10 minutes
 
 
 # --------------------------------------------------------------------------- #
