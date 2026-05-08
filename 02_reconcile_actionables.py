@@ -10,14 +10,14 @@ OVERVIEW
 
 This script does two things:
 
-  1. CALIBRATE θ  — Before running the reconciliation, it downloads the
-     STS15 semantic textual similarity benchmark from HuggingFace
-     (mteb/sts15-sts).  Each STS pair has a human-annotated similarity
-     score 0–5.  We treat pairs with score ≥ 4.0 as "should cluster"
-     and pairs with score < 2.0 as "should NOT cluster".  We then run
-     a grid search over candidate θ values and pick the one that
-     maximises F1 on this ground truth.  A chart is saved showing
-     Precision / Recall / F1 vs θ so you can inspect the tradeoff.
+  1. CALIBRATE θ  — Downloads TWO benchmarks (STS15 + SICK-R) and runs
+     a two-phase grid search to find the θ that maximises AVERAGE F1
+     across both.  Using two benchmarks prevents overfitting to one
+     dataset's sentence distribution.  Similarity is an ensemble of
+     lexical (Jaccard + overlap) and semantic (sentence-transformers
+     cosine) scores, weighted 40/60 by default.  A four-panel chart
+     is saved showing per-benchmark and average F1 curves plus score
+     distribution histograms.
 
   2. RECONCILE — Using the calibrated θ, run the full per-article
      pipeline across all five model CSVs, producing:
@@ -80,6 +80,19 @@ import argparse
 import textwrap
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing
+
+# Force 'spawn' start method so child processes don't inherit
+# the parent's CUDA context.  'fork' (Linux default) causes
+# 'Cannot re-initialize CUDA in forked subprocess' errors when
+# sentence-transformers has loaded a GPU model before forking.
+# 'spawn' starts a clean Python interpreter each time — safe.
+# Must be called before any ProcessPoolExecutor is created.
+if multiprocessing.get_start_method(allow_none=True) != 'spawn':
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass   # already set (e.g. on macOS where spawn is default)
 from datetime import datetime
 from itertools import combinations
 from statistics import mean
@@ -87,6 +100,11 @@ from statistics import mean
 import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
+
+# Lazy-loaded at first use so the script starts fast even when the model
+# is not yet cached.  Set to None to force pure-lexical mode.
+_SENTENCE_MODEL = None   # populated by _get_sentence_model()
+SENTENCE_MODEL_NAME = "all-MiniLM-L6-v2"   # 80 MB, fast, strong STS performance
 
 # ══════════════════════════════════════════════════════════════════════
 # CONFIGURATION
@@ -101,9 +119,14 @@ CSV_PATHS = {
 }
 
 # Output directories / files
-LOG_DIR    = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/log")
-OUTPUT_CSV = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/reconciled_actionables.csv")
-CHART_PATH = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/theta_calibration.png")
+LOG_DIR             = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/log")
+OUTPUT_CSV          = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/reconciled_actionables.csv")
+CHART_PATH          = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/theta_calibration.png")
+
+# Benchmark datasets are saved here as CSV after the first download.
+# On subsequent runs the cached file is loaded instantly — no network needed.
+# Delete a file from this directory to force a fresh download.
+BENCHMARK_CACHE_DIR = pathlib.Path("/data/Deep_Angiography/ReACT-GPT/benchmark")
 
 # Similarity threshold — overwritten by calibration unless --skip-calibration
 SIM_THRESHOLD = 0.08
@@ -132,14 +155,60 @@ STOPWORDS = {
 STS_POSITIVE = 4.0   # clear paraphrases
 STS_NEGATIVE = 2.0   # clearly different
 
-# θ candidates to evaluate in the grid search
-# Phase-1 coarse grid: full range 0.01 → 0.95 in steps of 0.02.
-# This ensures we never miss a peak at either extreme.
-# Phase-2 fine grid: ±0.05 around the coarse best, step 0.005.
-# Both phases are built dynamically in calibrate_theta() — this
-# constant is kept only as a fallback if that function is bypassed.
-THETA_GRID = list(round(v, 3) for v in
-                  [x * 0.02 + 0.01 for x in range(48)])   # 0.01 … 0.95
+# θ candidates — built dynamically in calibrate_theta(), kept as fallback.
+THETA_GRID = list(round(v, 3) for v in [x * 0.02 + 0.01 for x in range(48)])
+
+# ── Dual-benchmark calibration ────────────────────────────────────────────────
+# We calibrate θ on two independent benchmarks and take the θ that maximises
+# the AVERAGE F1 across both.  This guards against overfitting to one dataset.
+#
+#   Benchmark 1 — STS15 (mteb/sts15-sts)
+#     General-purpose sentence pairs, annotated 0–5.
+#     Good coverage of paraphrase diversity.
+#
+#   Benchmark 2 — SICK-R (sick)
+#     Sentence Involving Compositional Knowledge — Relatedness split.
+#     Human scores 1–5 (different scale; we normalise to 0–5).
+#     Covers more compositional and negation cases than STS15.
+#
+# Using two benchmarks is more robust than one because:
+#   • They have different sentence types and domains.
+#   • A θ that is optimal for both generalises better to unseen data.
+#   • If the two optimal θ values differ significantly, it signals that
+#     the similarity metric itself needs improvement.
+STS_BENCHMARK_CONFIGS = [
+    {
+        "name":        "STS15",
+        "hf_dataset":  "mteb/sts15-sts",
+        "hf_split":    "test",
+        "col_s1":      "sentence1",
+        "col_s2":      "sentence2",
+        "col_score":   "score",
+        "score_min":   0.0,
+        "score_max":   5.0,   # native scale; used as-is
+        "positive_threshold": 4.0,   # ≥ this → SAME
+        "negative_threshold": 2.0,   # ≤ this → DIFFERENT
+    },
+    {
+        "name":        "SICK-R",
+        "hf_dataset":  "sick",
+        "hf_split":    "test",
+        "col_s1":      "sentence_A",
+        "col_s2":      "sentence_B",
+        "col_score":   "relatedness_score",
+        "score_min":   1.0,
+        "score_max":   5.0,   # normalised to 0–5 before thresholding
+        "positive_threshold": 4.0,   # ≥ 4/5 → SAME (tight paraphrase)
+        "negative_threshold": 2.5,   # ≤ 2.5/5 → DIFFERENT
+    },
+]
+
+# ── Similarity ensemble weights ───────────────────────────────────────────────
+# Final similarity = W_LEXICAL × lexical_score + W_SEMANTIC × semantic_score
+# Semantic score: cosine similarity of sentence-transformers embeddings.
+# Set W_SEMANTIC = 0.0 to fall back to pure lexical (original behaviour).
+W_LEXICAL  = 0.40
+W_SEMANTIC = 0.60
 
 # Minimum number of distinct source models a cluster needs to be kept.
 # 1 = keep singletons (comprehensive); 2 = require cross-model corroboration.
@@ -150,6 +219,62 @@ N_MODELS   = len(ALL_MODELS)
 
 # Parallel worker count for article processing.
 N_WORKERS = os.cpu_count() or 1
+
+
+# ══════════════════════════════════════════════════════════════════════
+# SENTENCE EMBEDDING UTILITY
+# ══════════════════════════════════════════════════════════════════════
+
+def _get_sentence_model():
+    """
+    Lazily load the sentence-transformers model on first call.
+
+    The model is cached in the module-level _SENTENCE_MODEL variable so
+    it is loaded only once per process, even across multiple articles.
+
+    If sentence-transformers is not installed or the model cannot be
+    downloaded (e.g. air-gapped environment), this returns None and
+    text_similarity() falls back to pure lexical scoring.
+
+    Model choice: all-MiniLM-L6-v2
+      • 80 MB — fast to download and encode
+      • Trained specifically for semantic textual similarity tasks
+      • Strong performance on STS benchmarks (Spearman ρ ~0.88)
+      • Drop-in replacement requires no fine-tuning
+    """
+    global _SENTENCE_MODEL
+    if _SENTENCE_MODEL is not None:
+        return _SENTENCE_MODEL
+    if W_SEMANTIC == 0.0:
+        return None   # pure-lexical mode, skip loading
+    try:
+        from sentence_transformers import SentenceTransformer
+        print(f"   Loading sentence model '{SENTENCE_MODEL_NAME}' … ",
+              end="", flush=True)
+        _SENTENCE_MODEL = SentenceTransformer(SENTENCE_MODEL_NAME)
+        print("loaded")
+        return _SENTENCE_MODEL
+    except Exception as e:
+        print(f"\n   [WARN] Could not load sentence model ({e}). "
+              "Falling back to pure lexical similarity.")
+        _SENTENCE_MODEL = None
+        return None
+
+
+def _semantic_similarity(t1: str, t2: str, model) -> float:
+    """
+    Cosine similarity of sentence-transformer embeddings.
+
+    Captures paraphrase relationships that lexical overlap misses —
+    e.g. 'enhance reusability' vs 'improve maintainability' scores
+    near-zero with Jaccard but ~0.75 with embeddings.
+
+    Returns float in [−1, 1] clipped to [0, 1].
+    """
+    import numpy as np
+    e1 = model.encode(t1, normalize_embeddings=True, show_progress_bar=False)
+    e2 = model.encode(t2, normalize_embeddings=True, show_progress_bar=False)
+    return float(max(0.0, float(np.dot(e1, e2))))
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -195,20 +320,16 @@ def overlap_coef(a: set, b: set) -> float:
     return len(a & b) / min(len(a), len(b))
 
 
-def text_similarity(t1: str, t2: str) -> float:
+def _lexical_similarity(t1: str, t2: str) -> float:
     """
-    Hybrid similarity in [0, 1]:
+    Pure lexical similarity (original metric).
 
-        0.5 × mean_Jaccard(unigram + bigram + trigram)
-      + 0.5 × overlap_coefficient(unigrams)
+    Hybrid of:
+      • Mean Jaccard over unigram + bigram + trigram sets
+      • Overlap coefficient on unigrams
 
-    After stopword removal:
-    - Jaccard captures shared phrase structure.
-    - Overlap coefficient catches paraphrases where vocabulary differs
-      in size (one model is more verbose than another).
-
-    Called on the MERGED string (recommendation + impact + evidence)
-    so all three fields contribute equally without manual weighting.
+    After stopword removal, captures surface-level paraphrase via
+    shared vocabulary.  Fast — no model inference required.
     """
     tok1, tok2 = tokenise(t1), tokenise(t2)
     j_score  = sum(jaccard(ngrams(tok1, n), ngrams(tok2, n)) for n in (1, 2, 3)) / 3.0
@@ -216,92 +337,178 @@ def text_similarity(t1: str, t2: str) -> float:
     return (j_score + ov_score) / 2.0
 
 
+def text_similarity(t1: str, t2: str) -> float:
+    """
+    Ensemble similarity in [0, 1]:
+
+        W_LEXICAL  × lexical_score   (Jaccard n-gram + overlap coef)
+      + W_SEMANTIC × semantic_score  (sentence-transformers cosine)
+
+    WHY ENSEMBLE?
+    ─────────────
+    Lexical similarity (Jaccard + overlap) works well when two texts
+    share surface vocabulary — common for short, structured actionables
+    from the same domain.  But it fails for semantic paraphrases where
+    vocabulary differs: "enhance reusability" vs "improve maintainability"
+    scores near zero with Jaccard despite meaning similar things.
+
+    Semantic similarity via sentence-transformers captures meaning
+    regardless of surface form, but can over-cluster tangentially related
+    sentences that happen to share a topic.
+
+    Ensembling (default 40% lexical + 60% semantic) gets the best of
+    both: robust to surface variation while remaining discriminative
+    about genuine semantic differences.
+
+    FALLBACK
+    ────────
+    If sentence-transformers is not installed or W_SEMANTIC == 0.0,
+    this function is identical to the original _lexical_similarity().
+    """
+    lex = _lexical_similarity(t1, t2)
+    if W_SEMANTIC == 0.0:
+        return lex
+    model = _get_sentence_model()
+    if model is None:
+        return lex   # graceful fallback if model unavailable
+    sem = _semantic_similarity(t1, t2, model)
+    return W_LEXICAL * lex + W_SEMANTIC * sem
+
+
 # ══════════════════════════════════════════════════════════════════════
 # THETA CALIBRATION VIA STS15 BENCHMARK
 # ══════════════════════════════════════════════════════════════════════
 
-def download_sts15() -> pd.DataFrame:
-    """
-    Download the STS15 test split from HuggingFace (mteb/sts15-sts).
+# ── SE-domain fallback pairs (used when HF is unreachable) ──────────────────
+_FALLBACK_PAIRS = [
+    # HIGH ≥ 4.0 — paraphrases, SHOULD cluster
+    ("Use Python for NLP4RE tool development to ensure reusability.",
+     "Implement NLP4RE solutions in Python to improve reusability of existing tools.", 4.8),
+    ("Configure the depth parameter to control Wikipedia traversal depth.",
+     "Set the depth parameter to adjust how deeply Wikipedia categories are traversed.", 4.6),
+    ("Use WikiDoMiner to generate a domain-specific corpus from requirements.",
+     "Apply WikiDoMiner to build a domain corpus for your requirements specification.", 4.5),
+    ("Adopt Python libraries for NLP to avoid Java maintenance issues.",
+     "Use Python-based NLP libraries to prevent outdated Java dependency problems.", 4.3),
+    ("Prioritize code smells in the predominant programming paradigm.",
+     "Focus code smell research on the dominant paradigm of the target language.", 4.2),
+    ("Release tools under open-source licenses to enable community reuse.",
+     "Publish NLP4RE tools as open-source to foster community adoption and reuse.", 4.4),
+    ("Evaluate models on domain-specific benchmarks rather than generic ones.",
+     "Test NLP tools on domain-specific datasets not only standard NLP benchmarks.", 4.1),
+    ("Pre-train language models on domain corpora before fine-tuning.",
+     "Fine-tune pre-trained models on domain-specific text prior to deployment.", 3.9),
+    # MID 2.0–4.0 — excluded from calibration (ambiguous)
+    ("Configure corpus depth parameter for Wikipedia category traversal.",
+     "Use WikiDoMiner to generate domain-specific corpora for NLP tasks.", 2.8),
+    ("Implement tools in Python for reusability across NLP4RE ecosystem.",
+     "Release NLP tools under open-source licenses for community adoption.", 2.2),
+    # LOW ≤ 2.0 — different, SHOULD NOT cluster
+    ("Use Python for NLP4RE tool development.",
+     "Prioritize code smells in the predominant paradigm.", 0.8),
+    ("Configure depth parameter for Wikipedia traversal.",
+     "Release tools under open-source licenses.", 0.5),
+    ("Apply WikiDoMiner to generate domain corpus.",
+     "Use static analysis to detect Python anti-patterns.", 0.3),
+    ("Adopt Python for NLP tooling.",
+     "Pre-train language models on domain corpora.", 1.2),
+    ("Configure corpus depth for Wikipedia traversal.",
+     "Evaluate models on domain-specific benchmarks.", 0.9),
+    ("Use Python libraries instead of Java.",
+     "Prioritize smells in dominant programming paradigm.", 0.4),
+]
 
-    STS15 contains ~1400 sentence pairs with human similarity scores
-    on a 0–5 scale.  We use it to calibrate θ: pairs scored ≥ 4.0 are
-    ground-truth "same meaning" (should cluster); pairs scored ≤ 2.0
-    are ground-truth "different meaning" (should not cluster).
 
-    Returns a DataFrame with columns: sentence1, sentence2, score.
-    Falls back to a built-in SE-domain sample if HuggingFace is
-    unreachable (e.g. in air-gapped environments).
+def download_benchmark(cfg: dict) -> pd.DataFrame:
     """
-    print("\n── Calibration: downloading STS15 benchmark ──")
+    Load one benchmark dataset, using a local cache when available.
+
+    CACHING BEHAVIOUR
+    ─────────────────
+    On first run the dataset is fetched from HuggingFace and saved as
+    a CSV to BENCHMARK_CACHE_DIR/<name>.csv.  Every subsequent run
+    loads the cached file instantly — no network request is made.
+
+    To force a fresh download (e.g. after a dataset update):
+        rm /data/Deep_Angiography/ReACT-GPT/benchmark/<name>.csv
+
+    Config keys
+    ───────────
+    name               : human label; also used as the cache filename
+    hf_dataset         : HuggingFace dataset identifier
+    hf_split           : split to use ("test", "validation", …)
+    col_s1, col_s2     : column names for the two sentences
+    col_score          : column name for the similarity score
+    score_min/max      : native score range (used for normalisation)
+    positive_threshold : normalised score ≥ this → SAME
+    negative_threshold : normalised score ≤ this → DIFFERENT
+
+    Scores are normalised to [0, 5] so both STS15 (0–5) and
+    SICK-R (1–5) use the same thresholding scale.
+
+    Falls back to the built-in SE-domain pairs on network failure.
+    """
+    name       = cfg["name"]
+    cache_path = BENCHMARK_CACHE_DIR / f"{name}.csv"
+
+    def _normalise(df: pd.DataFrame) -> pd.DataFrame:
+        lo, hi = cfg["score_min"], cfg["score_max"]
+        df = df.copy()
+        df["score"] = ((df["score"] - lo) / (hi - lo) * 5.0).clip(0, 5)
+        return df
+
+    # ── Check cache first ─────────────────────────────────────────────────────
+    if cache_path.exists():
+        df = pd.read_csv(cache_path)
+        print(f"\n── Benchmark: {name} — loaded from cache ({cache_path})")
+        print(f"   {len(df)} pairs (delete file to force re-download)")
+        return df
+
+    # ── Cache miss: download ──────────────────────────────────────────────────
+    print(f"\n── Benchmark: {name} — downloading ({cfg['hf_dataset']}) ──")
+    df = None
+
     try:
-        # Primary: HuggingFace datasets library
         from datasets import load_dataset
-        ds = load_dataset("mteb/sts15-sts", split="test")
-        df = ds.to_pandas()[["sentence1", "sentence2", "score"]]
+        ds = load_dataset(cfg["hf_dataset"], split=cfg["hf_split"])
+        df = ds.to_pandas()[[cfg["col_s1"], cfg["col_s2"], cfg["col_score"]]]
+        df.columns = ["sentence1", "sentence2", "score"]
         df["score"] = df["score"].astype(float)
-        print(f"   Downloaded {len(df)} pairs from HuggingFace (mteb/sts15-sts)")
-        return df
+        df = _normalise(df)
+        print(f"   Downloaded {len(df)} pairs from HuggingFace")
     except Exception as e1:
-        print(f"   HuggingFace download failed ({e1}), trying parquet URL …")
+        print(f"   HuggingFace failed ({type(e1).__name__}), trying parquet …")
 
+    if df is None:
+        parquet_urls = {
+            "mteb/sts15-sts": ("https://huggingface.co/datasets/mteb/sts15-sts"
+                               "/resolve/main/data/test-00000-of-00001.parquet"),
+            "sick":           ("https://huggingface.co/datasets/sick"
+                               "/resolve/main/data/test-00000-of-00001.parquet"),
+        }
+        if cfg["hf_dataset"] in parquet_urls:
+            try:
+                df = pd.read_parquet(parquet_urls[cfg["hf_dataset"]])
+                df = df[[cfg["col_s1"], cfg["col_s2"], cfg["col_score"]]]
+                df.columns = ["sentence1", "sentence2", "score"]
+                df["score"] = df["score"].astype(float)
+                df = _normalise(df)
+                print(f"   Downloaded {len(df)} pairs via parquet")
+            except Exception as e2:
+                print(f"   Parquet also failed ({type(e2).__name__}).")
+
+    if df is None:
+        print(f"   Using built-in SE-domain fallback for {name}.")
+        df = pd.DataFrame(_FALLBACK_PAIRS, columns=["sentence1", "sentence2", "score"])
+
+    # ── Save to cache ─────────────────────────────────────────────────────────
     try:
-        # Secondary: raw parquet from HF CDN
-        url = ("https://huggingface.co/datasets/mteb/sts15-sts"
-               "/resolve/main/data/test-00000-of-00001.parquet")
-        df = pd.read_parquet(url)[["sentence1", "sentence2", "score"]]
-        df["score"] = df["score"].astype(float)
-        print(f"   Downloaded {len(df)} pairs via parquet URL")
-        return df
-    except Exception as e2:
-        print(f"   Parquet URL also failed ({e2}). Using built-in SE-domain fallback.")
+        BENCHMARK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        df.to_csv(cache_path, index=False)
+        print(f"   Cached → {cache_path}")
+    except Exception as e:
+        print(f"   [WARN] Could not write cache ({e}) — continuing without caching.")
 
-    # ── Fallback: curated SE / NLP4RE pairs matching the paper domain ────────
-    # These mirror the STS format and cover the same vocabulary as your data.
-    # Replace this block with real STS data once network access is available.
-    fallback = [
-        # ── HIGH similarity ≥ 4.0 (paraphrases — SHOULD cluster) ────────────
-        ("Use Python for NLP4RE tool development to ensure reusability.",
-         "Implement NLP4RE solutions in Python to improve reusability of existing tools.", 4.8),
-        ("Configure the depth parameter to control Wikipedia traversal depth.",
-         "Set the depth parameter to adjust how deeply Wikipedia categories are traversed.", 4.6),
-        ("Use WikiDoMiner to generate a domain-specific corpus from requirements.",
-         "Apply WikiDoMiner to build a domain corpus for your requirements specification.", 4.5),
-        ("Adopt Python libraries for NLP to avoid Java maintenance issues.",
-         "Use Python-based NLP libraries to prevent outdated Java dependency problems.", 4.3),
-        ("Prioritize code smells in the predominant programming paradigm.",
-         "Focus code smell research on the dominant paradigm of the target language.", 4.2),
-        ("Release tools under open-source licenses to enable community reuse.",
-         "Publish NLP4RE tools as open-source to foster community adoption and reuse.", 4.4),
-        ("Evaluate models on domain-specific benchmarks rather than generic ones.",
-         "Test NLP tools on domain-specific datasets not only standard NLP benchmarks.", 4.1),
-        ("Pre-train language models on domain corpora before fine-tuning.",
-         "Fine-tune pre-trained models on domain-specific text prior to deployment.", 3.9),
-        # ── MID similarity 2.0–4.0 (related but different — EXCLUDED) ────────
-        ("Configure corpus depth parameter for Wikipedia category traversal.",
-         "Use WikiDoMiner to generate domain-specific corpora for NLP tasks.", 2.8),
-        ("Implement tools in Python for reusability across NLP4RE ecosystem.",
-         "Release NLP tools under open-source licenses for community adoption.", 2.2),
-        ("Use static analysis to detect anti-patterns in Python code.",
-         "Adopt Python as the standard language for NLP4RE tooling.", 2.0),
-        ("Evaluate tools on domain benchmarks to ensure generalisability.",
-         "Configure depth parameter to control corpus size and relevance.", 1.8),
-        # ── LOW similarity < 2.0 (unrelated — SHOULD NOT cluster) ───────────
-        ("Use Python for NLP4RE tool development.",
-         "Prioritize code smells in the predominant paradigm.", 0.8),
-        ("Configure depth parameter for Wikipedia traversal.",
-         "Release tools under open-source licenses.", 0.5),
-        ("Apply WikiDoMiner to generate domain corpus.",
-         "Use static analysis to detect Python anti-patterns.", 0.3),
-        ("Adopt Python for NLP tooling.",
-         "Pre-train language models on domain corpora.", 1.2),
-        ("Configure corpus depth for Wikipedia traversal.",
-         "Evaluate models on domain-specific benchmarks.", 0.9),
-        ("Use Python libraries instead of Java.",
-         "Prioritize smells in dominant programming paradigm.", 0.4),
-    ]
-    df = pd.DataFrame(fallback, columns=["sentence1", "sentence2", "score"])
-    print(f"   Using built-in fallback: {len(df)} pairs")
     return df
 
 
@@ -325,127 +532,120 @@ def _score_theta(theta: float, sims: "pd.Series", gt: "pd.Series") -> dict:
             "tp": tp, "fp": fp, "fn": fn}
 
 
-def calibrate_theta(sts_df: pd.DataFrame, chart_path: pathlib.Path) -> float:
+def calibrate_theta(chart_path: pathlib.Path) -> float:
     """
-    Two-phase grid search to find the θ that maximises F1 on STS15.
+    Dual-benchmark θ calibration.
 
-    WHY TWO PHASES?
-    ───────────────
-    A single fixed grid (e.g. 0.04–0.40) risks missing the true optimum
-    if it sits outside that range or in a gap between grid points.
+    STRATEGY
+    ────────
+    1. Download both STS15 and SICK-R from HuggingFace.
+    2. Compute text_similarity() on every pair in both benchmarks.
+    3. Run a two-phase grid search (coarse 0.01→0.95, fine ±0.05)
+       scoring each θ on EACH benchmark independently.
+    4. For each θ compute: avg_f1 = (f1_sts15 + f1_sick) / 2
+    5. Select the θ that maximises avg_f1.
+    6. Save a chart showing all three F1 curves + the chosen θ.
 
-      Phase 1 — Coarse sweep: θ from 0.01 to 0.95 in steps of 0.02.
-                This covers the entire meaningful range and cannot miss
-                a peak at either extreme.
-
-      Phase 2 — Fine zoom: ±0.05 around the Phase-1 best, step 0.005.
-                This finds the precise optimum within the promising region
-                to 3 decimal places.
-
-    HOW SCORING WORKS
-    ─────────────────
-    For each θ we predict "same cluster" if our text_similarity() ≥ θ.
-    Ground truth comes from human STS scores:
-      • score ≥ STS_POSITIVE (4.0) → SAME   (clear paraphrases)
-      • score ≤ STS_NEGATIVE (2.0) → DIFFERENT
-      • 2.0 < score < 4.0          → excluded (genuinely ambiguous)
-
-    We maximise F1 = harmonic mean of Precision and Recall, which
-    balances avoiding false merges (precision) with catching all true
-    paraphrases (recall).
-
-    The chart shows the full coarse curve plus a zoomed inset of the
-    fine phase so you can inspect the tradeoff and override if needed.
-
-    Parameters
-    ----------
-    sts_df     : DataFrame with columns sentence1, sentence2, score (0–5)
-    chart_path : Where to save the PNG chart
+    WHY TWO BENCHMARKS?
+    ───────────────────
+    A θ calibrated on only one dataset may overfit to that dataset's
+    sentence distribution.  STS15 covers general paraphrases; SICK-R
+    adds compositional and negation cases.  A θ that works well on
+    both is more likely to generalise to your SE/NLP actionable domain.
 
     Returns
     -------
     Best θ (float, 3 decimal places)
     """
-    print("\n── Calibration: computing text_similarity on STS pairs ──")
+    print("\n── Dual-Benchmark θ Calibration ──")
+    print(f"   Similarity: {W_LEXICAL:.0%} lexical + {W_SEMANTIC:.0%} semantic ensemble")
 
-    # Filter to unambiguous pairs only
-    clear_pairs = sts_df[
-        (sts_df["score"] >= STS_POSITIVE) | (sts_df["score"] <= STS_NEGATIVE)
-    ].copy()
-    clear_pairs["ground_truth"] = clear_pairs["score"] >= STS_POSITIVE
-    n_same = int(clear_pairs["ground_truth"].sum())
-    n_diff = len(clear_pairs) - n_same
-    print(f"   Using {len(clear_pairs)} unambiguous pairs out of {len(sts_df)} total")
-    print(f"   Same (≥{STS_POSITIVE}): {n_same}  |  Different (≤{STS_NEGATIVE}): {n_diff}")
+    # ── Step 1: download both benchmarks ─────────────────────────────────────
+    benchmark_data = []
+    for cfg in STS_BENCHMARK_CONFIGS:
+        df = download_benchmark(cfg)
+        # Filter to unambiguous pairs
+        pos_t = cfg["positive_threshold"]
+        neg_t = cfg["negative_threshold"]
+        clear = df[(df["score"] >= pos_t) | (df["score"] <= neg_t)].copy()
+        clear["ground_truth"] = clear["score"] >= pos_t
+        n_same = int(clear["ground_truth"].sum())
+        n_diff = len(clear) - n_same
+        print(f"   {cfg['name']}: {len(clear)} unambiguous pairs "
+              f"(same={n_same}, diff={n_diff}) out of {len(df)}")
+        benchmark_data.append((cfg, clear))
 
-    # Compute our similarity metric once for all pairs (reused in both phases)
-    print("   Computing similarities … ", end="", flush=True)
-    clear_pairs["our_sim"] = [
-        text_similarity(r["sentence1"], r["sentence2"])
-        for _, r in clear_pairs.iterrows()
-    ]
-    print("done")
+    # ── Step 2: compute similarities once per benchmark ───────────────────────
+    # Pre-computing avoids redundant model inference during the grid search.
+    print("\n   Pre-computing similarities …")
+    for cfg, df in benchmark_data:
+        sims = [text_similarity(r["sentence1"], r["sentence2"])
+                for _, r in df.iterrows()]
+        df["our_sim"] = sims
+        print(f"   {cfg['name']}: done ({len(sims)} pairs)")
 
-    sims = clear_pairs["our_sim"]
-    gt   = clear_pairs["ground_truth"]
+    sims_list = [df["our_sim"]       for _, df in benchmark_data]
+    gt_list   = [df["ground_truth"]  for _, df in benchmark_data]
+    names     = [cfg["name"]         for cfg, _ in benchmark_data]
 
-    # ── Phase 1: coarse sweep 0.01 → 0.95, step 0.02 ─────────────────────────
-    coarse_grid = [round(0.01 + i * 0.02, 3) for i in range(48)]   # 0.01 … 0.95
+    # ── Step 3 & 4: two-phase grid search with avg F1 ────────────────────────
+    def _score_all(theta):
+        """Score θ on every benchmark and return per-benchmark + avg F1."""
+        rows = [_score_theta(theta, sims, gt)
+                for sims, gt in zip(sims_list, gt_list)]
+        avg_f1 = sum(r["f1"] for r in rows) / len(rows)
+        return rows, avg_f1
 
-    print(f"\n   Phase 1 — Coarse sweep ({len(coarse_grid)} values: "
-          f"{coarse_grid[0]} → {coarse_grid[-1]}, step 0.02)")
-    print(f"   {'θ':>6}  {'Precision':>10}  {'Recall':>8}  {'F1':>8}  "
-          f"{'TP':>5}  {'FP':>5}  {'FN':>5}")
-    print("   " + "─" * 60)
+    def _run_phase(grid, phase_name):
+        print(f"\n   {phase_name} ({len(grid)} values: {grid[0]} → {grid[-1]})")
+        # Header
+        hdr = f"   {'θ':>6}  {'avg_F1':>8}"
+        for n in names:
+            hdr += f"  {n+' F1':>12}  {n+' P':>8}  {n+' R':>8}"
+        print(hdr)
+        print("   " + "─" * (6 + 10 + len(names) * 32))
 
-    coarse_results = []
-    for theta in coarse_grid:
-        row = _score_theta(theta, sims, gt)
-        coarse_results.append(row)
-        print(f"   {theta:>6.3f}  {row['precision']:>10.3f}  "
-              f"{row['recall']:>8.3f}  {row['f1']:>8.3f}  "
-              f"{row['tp']:>5}  {row['fp']:>5}  {row['fn']:>5}")
+        results = []
+        for theta in grid:
+            rows, avg_f1 = _score_all(theta)
+            entry = {"theta": theta, "avg_f1": avg_f1}
+            line = f"   {theta:>6.3f}  {avg_f1:>8.3f}"
+            for i, (r, n) in enumerate(zip(rows, names)):
+                entry[f"f1_{n}"]        = r["f1"]
+                entry[f"precision_{n}"] = r["precision"]
+                entry[f"recall_{n}"]    = r["recall"]
+                line += f"  {r['f1']:>12.3f}  {r['precision']:>8.3f}  {r['recall']:>8.3f}"
+            print(line)
+            results.append(entry)
+        return pd.DataFrame(results)
 
-    coarse_df   = pd.DataFrame(coarse_results)
-    coarse_best = float(coarse_df.loc[coarse_df["f1"].idxmax(), "theta"])
-    coarse_f1   = float(coarse_df.loc[coarse_df["f1"].idxmax(), "f1"])
-    print(f"\n   Phase 1 best: θ = {coarse_best}  (F1 = {coarse_f1:.3f})")
+    coarse_grid = [round(0.01 + i * 0.02, 3) for i in range(48)]
+    coarse_df   = _run_phase(coarse_grid, "Phase 1 — Coarse (step 0.02)")
+    coarse_best = float(coarse_df.loc[coarse_df["avg_f1"].idxmax(), "theta"])
+    print(f"\n   Phase 1 best: θ={coarse_best}  avg_F1={coarse_df['avg_f1'].max():.3f}")
 
-    # ── Phase 2: fine zoom ±0.05 around coarse best, step 0.005 ──────────────
     fine_lo   = max(0.001, round(coarse_best - 0.05, 3))
     fine_hi   = min(0.999, round(coarse_best + 0.05, 3))
     fine_grid = [round(fine_lo + i * 0.005, 3)
                  for i in range(int((fine_hi - fine_lo) / 0.005) + 1)]
+    fine_df   = _run_phase(fine_grid, "Phase 2 — Fine zoom (step 0.005)")
+    best_row  = fine_df.loc[fine_df["avg_f1"].idxmax()]
+    best_theta = float(best_row["theta"])
+    best_avg   = float(best_row["avg_f1"])
 
-    print(f"\n   Phase 2 — Fine zoom ({len(fine_grid)} values: "
-          f"{fine_grid[0]} → {fine_grid[-1]}, step 0.005)")
-    print(f"   {'θ':>6}  {'Precision':>10}  {'Recall':>8}  {'F1':>8}  "
-          f"{'TP':>5}  {'FP':>5}  {'FN':>5}")
-    print("   " + "─" * 60)
+    print(f"\n   ★  Best θ = {best_theta}  (avg_F1={best_avg:.3f})")
+    for n in names:
+        print(f"      {n}: F1={best_row[f'f1_{n}']:.3f}  "
+              f"P={best_row[f'precision_{n}']:.3f}  "
+              f"R={best_row[f'recall_{n}']:.3f}")
+    print(f"   (coarse peak was {coarse_best}, fine search refined to {best_theta})")
 
-    fine_results = []
-    for theta in fine_grid:
-        row = _score_theta(theta, sims, gt)
-        fine_results.append(row)
-        print(f"   {theta:>6.3f}  {row['precision']:>10.3f}  "
-              f"{row['recall']:>8.3f}  {row['f1']:>8.3f}  "
-              f"{row['tp']:>5}  {row['fp']:>5}  {row['fn']:>5}")
-
-    fine_df   = pd.DataFrame(fine_results)
-    fine_best_row = fine_df.loc[fine_df["f1"].idxmax()]
-    best_theta    = float(fine_best_row["theta"])
-    best_f1       = float(fine_best_row["f1"])
-
-    print(f"\n   ★  Best θ = {best_theta}  "
-          f"(F1={best_f1:.3f}, "
-          f"P={fine_best_row['precision']:.3f}, "
-          f"R={fine_best_row['recall']:.3f})")
-    print(f"   (coarse best was {coarse_best}, fine search refined to {best_theta})")
-
-    # ── Generate chart ────────────────────────────────────────────────────────
-    _plot_calibration(coarse_df, fine_df, best_theta, chart_path, clear_pairs)
+    # ── Step 5: chart ─────────────────────────────────────────────────────────
+    _plot_calibration(coarse_df, fine_df, best_theta, chart_path,
+                      benchmark_data, names)
 
     return best_theta
+
 
 
 def _plot_calibration(
@@ -453,121 +653,107 @@ def _plot_calibration(
     fine_df: pd.DataFrame,
     best_theta: float,
     chart_path: pathlib.Path,
-    sts_pairs: pd.DataFrame,
+    benchmark_data: list,
+    names: list,
 ) -> None:
     """
-    Save a three-panel PNG:
-      Left   — Full coarse P/R/F1 curve (0.01 → 0.95, step 0.02)
-      Centre — Fine-zoom P/R/F1 curve  (±0.05 around best, step 0.005)
-      Right  — Histogram of similarity scores by ground truth label
+    Save a four-panel PNG:
+      Panel 1 — Coarse avg_F1 + per-benchmark F1 curves (full range)
+      Panel 2 — Fine-zoom avg_F1 curves (±0.05 around best)
+      Panel 3 — Score histogram: STS15 same vs different
+      Panel 4 — Score histogram: SICK-R same vs different
 
     Reading the chart:
-      • In the Left panel you see the global shape of the P/R tradeoff.
-        High θ → high precision (few false merges) but low recall (misses
-        many true paraphrases).  Low θ → the reverse.  F1 balances both.
-      • The Centre panel shows the precise optimum within the fine region.
-      • The Right panel confirms the chosen θ sits in the gap between the
-        "same" and "different" score distributions.  If the distributions
-        heavily overlap, the similarity metric itself needs improvement.
+      • Panel 1 shows the global shape and whether both benchmarks agree.
+        If their F1 peaks are far apart, the similarity metric needs work.
+      • Panel 2 gives the precise optimal θ at 0.005 resolution.
+      • Panels 3 & 4 confirm θ sits in the gap between distributions.
     """
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     except ImportError:
         print("   [WARN] matplotlib not installed — skipping chart")
         return
 
-    BG    = "#0F1117"
-    PANEL = "#1A1D27"
-    GRID  = "#2A2D3A"
-    TICK  = "#AAAAAA"
+    BG, PANEL, GRID = "#0F1117", "#1A1D27", "#2A2D3A"
+    BENCH_COLORS = ["#4FC3F7", "#81C784", "#CE93D8", "#FFCC80"]
+    AVG_COLOR    = "#FFD54F"
+    BEST_COLOR   = "#FF7043"
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5.5))
+    n_bench = len(names)
+    fig, axes = plt.subplots(1, 2 + n_bench, figsize=(6 * (2 + n_bench), 5.5))
     fig.patch.set_facecolor(BG)
     for ax in axes:
         ax.set_facecolor(PANEL)
-        ax.tick_params(colors=TICK, labelsize=9)
-        for spine in ax.spines.values():
-            spine.set_edgecolor("#333344")
+        ax.tick_params(colors="#AAAAAA", labelsize=9)
+        for sp in ax.spines.values():
+            sp.set_edgecolor("#333344")
 
-    def _draw_prf_panel(ax, df, title, mark_best=True):
-        """Draw P/R/F1 lines on ax from a results DataFrame."""
+    def _draw_panel(ax, df, title, mark=True):
         thetas = df["theta"].values
-        ax.plot(thetas, df["precision"].values, "o-", color="#4FC3F7",
-                lw=1.8, ms=4, label="Precision")
-        ax.plot(thetas, df["recall"].values,    "s-", color="#81C784",
-                lw=1.8, ms=4, label="Recall")
-        ax.plot(thetas, df["f1"].values,        "D-", color="#FFD54F",
-                lw=2.2, ms=5, label="F1", zorder=5)
-        if mark_best:
-            best_f1 = float(df.loc[df["theta"] == best_theta, "f1"].values[0])
-            ax.axvline(best_theta, color="#FF7043", lw=1.5,
-                       ls="--", alpha=0.9, label=f"Best θ={best_theta}")
-            ax.scatter([best_theta], [best_f1], color="#FF7043",
-                       s=100, zorder=6, edgecolors="white", lw=1)
-            # Annotation: position to avoid going off-chart
-            x_off = 0.015 if best_theta < (max(thetas) * 0.8) else -0.06
-            ax.annotate(f"θ={best_theta}\nF1={best_f1:.3f}",
-                        xy=(best_theta, best_f1),
-                        xytext=(best_theta + x_off, max(0.1, best_f1 - 0.14)),
-                        color="#FF7043", fontsize=8,
-                        arrowprops=dict(arrowstyle="->", color="#FF7043", lw=1))
+        # Per-benchmark F1
+        for i, n in enumerate(names):
+            ax.plot(thetas, df[f"f1_{n}"].values, "o-",
+                    color=BENCH_COLORS[i % len(BENCH_COLORS)],
+                    lw=1.5, ms=3, alpha=0.75, label=f"F1 {n}")
+        # Average F1
+        ax.plot(thetas, df["avg_f1"].values, "D-",
+                color=AVG_COLOR, lw=2.5, ms=5, zorder=5, label="avg F1")
+        if mark and best_theta in df["theta"].values:
+            bv = float(df.loc[df["theta"] == best_theta, "avg_f1"].values[0])
+            ax.axvline(best_theta, color=BEST_COLOR, lw=1.5, ls="--",
+                       alpha=0.9, label=f"Best θ={best_theta}")
+            ax.scatter([best_theta], [bv], color=BEST_COLOR, s=100,
+                       zorder=6, edgecolors="white", lw=1)
+            xoff = 0.015 if best_theta < max(thetas) * 0.8 else -0.07
+            ax.annotate(f"θ={best_theta}\navg_F1={bv:.3f}",
+                        xy=(best_theta, bv),
+                        xytext=(best_theta + xoff, max(0.1, bv - 0.15)),
+                        color=BEST_COLOR, fontsize=8,
+                        arrowprops=dict(arrowstyle="->", color=BEST_COLOR, lw=1))
         ax.set_xlabel("Threshold θ", color="#CCCCCC", fontsize=10)
         ax.set_ylabel("Score", color="#CCCCCC", fontsize=10)
-        ax.set_title(title, color="white", fontsize=11, fontweight="bold")
+        ax.set_title(title, color="white", fontsize=10, fontweight="bold")
         ax.set_ylim(-0.05, 1.05)
         ax.set_xlim(min(thetas) - 0.01, max(thetas) + 0.01)
         ax.legend(facecolor="#252836", edgecolor="#444455",
                   labelcolor="white", fontsize=8)
         ax.grid(True, color=GRID, lw=0.6, alpha=0.7)
 
-    # ── Left: full coarse curve ───────────────────────────────────────────────
-    # Check if best_theta is in coarse_df (it might only be in fine_df)
-    coarse_has_best = best_theta in coarse_df["theta"].values
-    _draw_prf_panel(
-        axes[0], coarse_df,
-        "Phase 1 — Coarse sweep\n(θ: 0.01 → 0.95, step 0.02)",
-        mark_best=coarse_has_best,
-    )
-    if not coarse_has_best:
-        # Still mark the coarse best for reference
-        coarse_best = float(coarse_df.loc[coarse_df["f1"].idxmax(), "theta"])
-        axes[0].axvline(coarse_best, color="#B0BEC5", lw=1, ls=":",
-                        alpha=0.7, label=f"Coarse peak θ={coarse_best}")
+    _draw_panel(axes[0], coarse_df,
+                "Phase 1 — Coarse sweep\n(0.01→0.95, step 0.02)", mark=True)
+    _draw_panel(axes[1], fine_df,
+                f"Phase 2 — Fine zoom\n(±0.05 around peak, step 0.005)", mark=True)
 
-    # ── Centre: fine zoom ─────────────────────────────────────────────────────
-    _draw_prf_panel(
-        axes[1], fine_df,
-        f"Phase 2 — Fine zoom\n(±0.05 around coarse peak, step 0.005)",
-        mark_best=True,
-    )
+    # Histograms per benchmark
+    for k, (cfg, df_b) in enumerate(benchmark_data):
+        ax = axes[2 + k]
+        same = df_b.loc[ df_b["ground_truth"], "our_sim"].values
+        diff = df_b.loc[~df_b["ground_truth"], "our_sim"].values
+        bins = np.linspace(0, max(float(df_b["our_sim"].max()), 0.6), 30)
+        ax.hist(diff, bins=bins, color="#EF5350", alpha=0.65,
+                label=f"Different (≤{cfg['negative_threshold']})",
+                edgecolor="#CC3333")
+        ax.hist(same, bins=bins, color="#42A5F5", alpha=0.65,
+                label=f"Same (≥{cfg['positive_threshold']})",
+                edgecolor="#1A5FAA")
+        ax.axvline(best_theta, color=BEST_COLOR, lw=2, ls="--",
+                   label=f"Best θ={best_theta}")
+        ax.set_xlabel("text_similarity() score", color="#CCCCCC", fontsize=10)
+        ax.set_ylabel("Count", color="#CCCCCC", fontsize=10)
+        ax.set_title(f"{cfg['name']} — Score Distribution\n"
+                     "(θ should sit in the gap)",
+                     color="white", fontsize=10, fontweight="bold")
+        ax.legend(facecolor="#252836", edgecolor="#444455",
+                  labelcolor="white", fontsize=8)
+        ax.grid(True, color=GRID, lw=0.6, alpha=0.7)
 
-    # ── Right: score distribution histogram ──────────────────────────────────
-    ax2 = axes[2]
-    same_sims = sts_pairs.loc[ sts_pairs["ground_truth"], "our_sim"].values
-    diff_sims = sts_pairs.loc[~sts_pairs["ground_truth"], "our_sim"].values
-    bins = np.linspace(0, max(float(sts_pairs["our_sim"].max()), 0.6), 30)
-
-    ax2.hist(diff_sims, bins=bins, color="#EF5350", alpha=0.65,
-             label=f"Different (score ≤ {STS_NEGATIVE})", edgecolor="#CC3333")
-    ax2.hist(same_sims, bins=bins, color="#42A5F5", alpha=0.65,
-             label=f"Same (score ≥ {STS_POSITIVE})", edgecolor="#1A5FAA")
-    ax2.axvline(best_theta, color="#FF7043", lw=2, ls="--",
-                label=f"Best θ = {best_theta}")
-    ax2.set_xlabel("text_similarity() score", color="#CCCCCC", fontsize=10)
-    ax2.set_ylabel("Count", color="#CCCCCC", fontsize=10)
-    ax2.set_title("Score Distribution by Label\n"
-                  "(θ should sit in the gap)",
-                  color="white", fontsize=11, fontweight="bold")
-    ax2.legend(facecolor="#252836", edgecolor="#444455",
-               labelcolor="white", fontsize=8)
-    ax2.grid(True, color=GRID, lw=0.6, alpha=0.7)
-
+    ens = f"{W_LEXICAL:.0%} lexical + {W_SEMANTIC:.0%} semantic"
     fig.suptitle(
-        "Two-Phase θ Calibration on STS15  —  ModeX Actionable Reconciliation",
-        color="white", fontsize=13, fontweight="bold", y=1.01,
+        f"Dual-Benchmark θ Calibration  ({ens})  —  ModeX Actionable Reconciliation",
+        color="white", fontsize=12, fontweight="bold", y=1.01,
     )
     plt.tight_layout()
     chart_path.parent.mkdir(parents=True, exist_ok=True)
@@ -576,10 +762,6 @@ def _plot_calibration(
     plt.close(fig)
     print(f"   Chart saved → {chart_path}")
 
-
-# ══════════════════════════════════════════════════════════════════════
-# CSV LOADING
-# ══════════════════════════════════════════════════════════════════════
 
 def safe_parse(raw: str):
     """
@@ -1209,9 +1391,8 @@ def main(
         calibrated_theta = fixed_theta if fixed_theta is not None else SIM_THRESHOLD
         print(f"\n  [Calibration skipped]  Using θ = {calibrated_theta}")
     else:
-        sts_df           = download_sts15()
         CHART_PATH.parent.mkdir(parents=True, exist_ok=True)
-        calibrated_theta = calibrate_theta(sts_df, CHART_PATH)
+        calibrated_theta = calibrate_theta(CHART_PATH)
         print(f"\n  Calibrated θ = {calibrated_theta}")
 
     SIM_THRESHOLD = calibrated_theta   # apply globally for cluster_pool()
@@ -1250,7 +1431,8 @@ def main(
              calibrated_theta)
             for akey in article_keys
         ]
-        with ProcessPoolExecutor(max_workers=workers) as pool:
+        ctx = multiprocessing.get_context('spawn')
+        with ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as pool:
             futures = {pool.submit(_worker, t): t[0] for t in tasks}
             for future in as_completed(futures):
                 akey, canonical = future.result()
