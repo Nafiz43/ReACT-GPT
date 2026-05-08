@@ -5,9 +5,10 @@ Optimizations applied (single-GPU, one model at a time):
   1. keep_alive      — model stays hot in VRAM for the entire run
   2. Model-first batching — process ALL rows for one model before loading next
                             (eliminates repeated model swaps — biggest speedup)
-  3. Per-model num_predict — deepseek-r1 gets more tokens for <think> blocks;
-                             others are capped tight
-  4. Streaming + early exit — stop generating the moment YES/NO is seen
+  3. Per-model num_predict — generous budgets to avoid UNCLEAR responses
+  4. Streaming + early exit — stop generating the moment YES/NO is seen (score mode)
+  5. Single category call   — one call per row per model; categories parsed via regex
+                              (8x fewer calls vs per-category approach)
 
 Two modes:
 
@@ -15,30 +16,37 @@ Two modes:
   -------------------------------------------------
   Input : CSV with columns: actionable, impact, evidence
   Output: same CSV + per-model binary decisions + majority verdicts
+  Default output: /data/Deep_Angiography/ReACT-GPT/local_history/scored.csv
 
   TASK 2 — Category assignment  (--mode categorize)
   --------------------------------------------------
-  Input : CSV with column: actionable
+  Input : scored.csv (auto-set if --input not provided)
   Output: new CSV + per-model per-category decisions + assigned_categories
+  Default output: /data/Deep_Angiography/ReACT-GPT/local_history/categorized.csv
+  Calls : rows × models × 1  (NOT rows × models × categories)
 
 Majority rule: >= 3 / 5 models must agree.
 An actionable can belong to multiple categories.
 
-Usage:
+Usage (minimal — paths are auto-set):
+  python react_scorer.py --mode score
+  python react_scorer.py --mode categorize
+
+Usage (explicit paths):
   python react_scorer.py --mode score \\
       --input  /data/.../reconciled_actionables.csv \\
-      --output ./reconciled_actionables_scored.csv
+      --output ./scored.csv
 
   python react_scorer.py --mode categorize \\
-      --input  /data/.../reconciled_actionables_scored.csv \\
-      --output ./reconciled_actionables_categorized.csv
+      --input  /data/.../scored.csv \\
+      --output ./categorized.csv
 
 Flags:
   --ollama_url   http://localhost:11434
   --keep_alive   120m          how long to keep model in VRAM (default 120m)
   --timeout      600           seconds per Ollama call
   --delay        0.0           sleep between calls (usually 0 with streaming)
-  --resume                     skip already-processed rows
+  --resume                     skip already-processed rows (by content key)
   --limit        N             process only first N rows (testing)
 """
 
@@ -55,6 +63,15 @@ from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Default paths
+# ─────────────────────────────────────────────────────────────────────────────
+
+BASE_DIR            = "/data/Deep_Angiography/ReACT-GPT/local_history"
+DEFAULT_INPUT       = f"{BASE_DIR}/reconciled_actionables.csv"
+DEFAULT_SCORED      = f"{BASE_DIR}/scored.csv"
+DEFAULT_CATEGORIZED = f"{BASE_DIR}/categorized.csv"
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -66,18 +83,16 @@ MODELS = [
     "mixtral:8x7b",
 ]
 
-# Per-model token budgets.
-# deepseek-r1 emits <think>...</think> blocks before YES/NO — needs more room.
-# Others are well-behaved with a tight cap.
+# Per-model token budgets — generous to avoid UNCLEAR responses.
 MODEL_NUM_PREDICT = {
-    "deepseek-r1:32b": 512,
-    "qwen3.6:35b":      64,
-    "gpt-oss:20b":      32,
-    "gemma4:31b":       32,
-    "mixtral:8x7b":     16,
+    "deepseek-r1:32b": 2048,
+    "qwen3.6:35b":     2048,
+    "gpt-oss:20b":     2048,
+    "gemma4:31b":      2048,
+    "mixtral:8x7b":    2048,
 }
 
-# ── Category definitions (verbatim from the paper appendix) ──────────────────
+# ── Category definitions ──────────────────────────────────────────────────────
 CATEGORIES = {
     "New Contributor Onboarding and Involvement": (
         "This category focuses on ensuring that new contributors can easily join, understand, "
@@ -198,16 +213,12 @@ def tqdm_log(msg: str):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def ollama_generate(model: str, prompt: str, base_url: str,
-                    timeout: int = 600, keep_alive: str = "120m") -> str:
+                    timeout: int = 600, keep_alive: str = "120m",
+                    early_exit: bool = True) -> str:
     """
-    Stream tokens from Ollama and return as soon as YES or NO is found.
-
-    Speed optimizations active:
-      - stream=True      tokens arrive immediately; we stop on first YES/NO
-      - keep_alive       model stays in VRAM — no reload between rows
-      - num_predict      per-model cap via MODEL_NUM_PREDICT
-      - num_ctx=512      small KV-cache → fast prefill for short prompts
-      - temperature=0    deterministic
+    Stream tokens from Ollama.
+    If early_exit=True, stops as soon as YES or NO is found (score mode).
+    If early_exit=False, reads the full response (categorize mode).
     """
     url = f"{base_url.rstrip('/')}/api/generate"
     payload = {
@@ -217,8 +228,8 @@ def ollama_generate(model: str, prompt: str, base_url: str,
         "keep_alive": keep_alive,
         "options": {
             "temperature": 0.0,
-            "num_predict": MODEL_NUM_PREDICT.get(model, 64),
-            "num_ctx":     512,
+            "num_predict": MODEL_NUM_PREDICT.get(model, 2048),
+            "num_ctx":     4096,
         },
     }
 
@@ -236,8 +247,8 @@ def ollama_generate(model: str, prompt: str, base_url: str,
 
                 collected += chunk.get("response", "")
 
-                # Early exit — stop the moment YES or NO appears
-                if re.search(r"\b(YES|NO)\b", collected, re.IGNORECASE):
+                # Early exit for score mode only
+                if early_exit and re.search(r"\b(YES|NO)\b", collected, re.IGNORECASE):
                     return collected.strip()
 
                 if chunk.get("done", False):
@@ -272,11 +283,25 @@ def unload_model(model: str, base_url: str) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def parse_yes_no(text: str) -> str:
+    """
+    Extract YES/NO from model response.
+    Returns UNCLEAR if neither found — UNCLEAR votes are excluded from
+    majority counting so bad responses don't skew verdicts.
+    """
     match = re.search(r"\b(YES|NO)\b", text.strip(), re.IGNORECASE)
     return match.group(1).upper() if match else "UNCLEAR"
 
 
+def parse_category_numbers(text: str) -> set:
+    """
+    Extract category numbers (1–8) from model response.
+    Returns a set of matched integers. Empty set = no categories assigned.
+    """
+    return set(int(n) for n in re.findall(r'\b([1-8])\b', text))
+
+
 def majority_vote(votes: list, threshold: int = 3) -> str:
+    """UNCLEAR votes are ignored — only YES/NO count toward the threshold."""
     return "YES" if sum(1 for v in votes if v == "YES") >= threshold else "NO"
 
 
@@ -315,17 +340,26 @@ def build_precise_prompt(actionable: str, impact: str, evidence: str) -> str:
     )
 
 
-def build_category_prompt(actionable: str, category_name: str, category_def: str) -> str:
+def build_category_prompt(actionable: str) -> str:
+    """
+    Single prompt listing all 8 categories.
+    Model replies with comma-separated numbers only — parsed via regex.
+    1 call per row per model instead of 8.
+    """
+    category_list = "\n".join(
+        f"  {i+1}. {name}" for i, name in enumerate(CATEGORY_KEYS)
+    )
     return (
         f"You are classifying a software engineering ReACT (Researched Actionable) "
-        f"into a predefined category.\n\n"
-        f"Category       : {category_name}\n"
-        f"Category Definition: {category_def}\n\n"
+        f"into one or more of the following categories:\n\n"
+        f"{category_list}\n\n"
         f"ReACT to classify:\n"
         f"  {actionable}\n\n"
-        f"Does this ReACT belong to the category '{category_name}'?\n\n"
-        f"STRICT INSTRUCTION: Reply with a single word only — either YES or NO. "
-        f"Do not write anything else. No explanation, no punctuation, no extra words."
+        f"Which categories does this ReACT belong to? "
+        f"Reply with ONLY the category numbers that apply, separated by commas. "
+        f"For example: 1, 3, 7\n"
+        f"If none apply, reply with: 0\n"
+        f"No explanation, no category names — just the numbers."
     )
 
 
@@ -359,6 +393,20 @@ def get_field(row: pd.Series, col_map: dict, key: str) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Content key — composite primary key for deduplication
+# ─────────────────────────────────────────────────────────────────────────────
+
+def make_key(row: pd.Series, col_map: dict) -> str:
+    """Composite key: actionable + impact + evidence (lowercased, stripped)."""
+    parts = [
+        get_field(row, col_map, "actionable"),
+        get_field(row, col_map, "impact"),
+        get_field(row, col_map, "evidence"),
+    ]
+    return "||".join(p.strip().lower() for p in parts)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Resume helper
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -378,22 +426,44 @@ def load_existing(output_path: str, df: pd.DataFrame,
     return existing.copy(), done_indices
 
 
+def build_indices(df: pd.DataFrame, col_map: dict, out_df: pd.DataFrame,
+                  done_indices: list, limit: int, resume: bool) -> list:
+    """
+    Build list of row indices to process, skipping:
+      1. Rows already done by index (from resume)
+      2. Rows whose actionable+impact+evidence key was already seen
+         (content-based deduplication — skips identical actionables)
+    """
+    done_keys = set()
+    if resume and done_indices:
+        for i in done_indices:
+            done_keys.add(make_key(out_df.iloc[i], col_map))
+
+    seen_keys = set()
+    indices   = []
+    for i in range(min(limit, len(df))):
+        if i in done_indices:
+            continue
+        key = make_key(df.iloc[i], col_map)
+        if key in done_keys or key in seen_keys:
+            tqdm_log(f"  ⏭ skip row {i+1} — duplicate actionable")
+            continue
+        seen_keys.add(key)
+        indices.append(i)
+    return indices
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # TASK 1 — Sound & Precise scoring  (model-first batching)
-#
-# Loop order:
-#   for each model:          ← loads ONCE, stays hot for all rows
-#       for each row:
-#           sound call
-#           precise call
-#   unload model → load next
-#   after all models: compute verdicts
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_scoring(args):
     log.info("=== MODE: score ===")
+    log.info("Input  : %s", args.input)
+    log.info("Output : %s", args.output)
+
     df = pd.read_csv(args.input)
-    log.info("Loaded %d rows × %d cols  |  %s", len(df), len(df.columns), args.input)
+    log.info("Loaded %d rows × %d cols", len(df), len(df.columns))
 
     col_map = detect_columns(df)
     log.info("Detected columns: %s", col_map)
@@ -414,11 +484,11 @@ def run_scoring(args):
             out_df[col] = None
 
     limit   = args.limit or len(df)
-    indices = [i for i in range(min(limit, len(df))) if i not in done_indices]
+    indices = build_indices(df, col_map, out_df, done_indices, limit, args.resume)
+
     log.info("Processing %d rows × %d models = %d × 2 calls total.",
              len(indices), len(MODELS), len(indices) * len(MODELS))
 
-    # ── Outer loop: model ─────────────────────────────────────────────────────
     model_bar = tqdm(MODELS, desc="Models", unit="model",
                      colour="yellow", dynamic_ncols=True)
 
@@ -429,7 +499,6 @@ def run_scoring(args):
             tqdm_log(f"  ▶ Model: {model}  (keep_alive={args.keep_alive})")
             tqdm_log(f"{'='*62}")
 
-            # ── Inner loop: rows ──────────────────────────────────────────────
             row_bar = tqdm(indices, desc=f"  {model[:22]}", unit="row",
                            colour="green", dynamic_ncols=True, leave=False)
 
@@ -446,6 +515,7 @@ def run_scoring(args):
                     model,
                     build_sound_prompt(actionable, impact, evidence),
                     args.ollama_url, args.timeout, args.keep_alive,
+                    early_exit=True,
                 )
                 s_dec = parse_yes_no(raw)
                 out_df.at[idx, f"sound_{model}"] = s_dec
@@ -457,6 +527,7 @@ def run_scoring(args):
                     model,
                     build_precise_prompt(actionable, impact, evidence),
                     args.ollama_url, args.timeout, args.keep_alive,
+                    early_exit=True,
                 )
                 p_dec = parse_yes_no(raw)
                 out_df.at[idx, f"precise_{model}"] = p_dec
@@ -468,14 +539,10 @@ def run_scoring(args):
                     f"sound={s_dec:<7} precise={p_dec:<7}  | {preview}…"
                 )
 
-            # Free VRAM before next model loads
             unload_model(model, args.ollama_url)
-
-            # Checkpoint — saved after every complete model pass
             out_df.to_csv(args.output, index=False)
-            tqdm_log(f"  ✓ checkpoint saved after {model}")
+            tqdm_log(f"  ✓ checkpoint saved → {args.output}")
 
-    # ── Compute majority verdicts ─────────────────────────────────────────────
     tqdm_log("\nComputing majority verdicts...")
     for idx in indices:
         s_votes = [out_df.at[idx, f"sound_{m}"]   for m in MODELS]
@@ -486,7 +553,7 @@ def run_scoring(args):
         out_df.at[idx, "precise_verdict"]   = majority_vote(p_votes)
 
     out_df.to_csv(args.output, index=False)
-    log.info("Done. Output: %s", args.output)
+    log.info("✓ Scoring complete. Output saved → %s", args.output)
 
     total       = out_df["sound_verdict"].notna().sum()
     sound_yes   = (out_df["sound_verdict"]   == "YES").sum()
@@ -500,21 +567,19 @@ def run_scoring(args):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TASK 2 — Category assignment  (model-first batching)
+# TASK 2 — Category assignment  (model-first batching, single call per row)
 #
-# Loop order:
-#   for each model:              ← loads ONCE
-#       for each row:
-#           for each category:
-#               YES/NO call
-#   unload model → load next
-#   after all models: compute verdicts + assigned_categories
+# Call count: rows × models × 1   (NOT rows × models × categories)
+# Model returns comma-separated category numbers → parsed via regex.
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_categorization(args):
     log.info("=== MODE: categorize ===")
+    log.info("Input  : %s", args.input)
+    log.info("Output : %s", args.output)
+
     df = pd.read_csv(args.input)
-    log.info("Loaded %d rows × %d cols  |  %s", len(df), len(df.columns), args.input)
+    log.info("Loaded %d rows × %d cols", len(df), len(df.columns))
 
     col_map = detect_columns(df)
     log.info("Actionable column: %s", col_map.get("actionable"))
@@ -537,12 +602,15 @@ def run_categorization(args):
             out_df[col] = None
 
     limit   = args.limit or len(df)
-    indices = [i for i in range(min(limit, len(df))) if i not in done_indices]
-    n_calls = len(indices) * len(MODELS) * len(CATEGORIES)
-    log.info("Processing %d rows × %d models × %d categories = %d calls.",
-             len(indices), len(MODELS), len(CATEGORIES), n_calls)
+    indices = build_indices(df, col_map, out_df, done_indices, limit, args.resume)
 
-    # ── Outer loop: model ─────────────────────────────────────────────────────
+    n_calls = len(indices) * len(MODELS)
+    log.info(
+        "Processing %d rows × %d models = %d calls "
+        "(categories parsed from single response — not %d per row).",
+        len(indices), len(MODELS), n_calls, len(CATEGORIES),
+    )
+
     model_bar = tqdm(MODELS, desc="Models", unit="model",
                      colour="yellow", dynamic_ncols=True)
 
@@ -553,7 +621,6 @@ def run_categorization(args):
             tqdm_log(f"  ▶ Model: {model}  (keep_alive={args.keep_alive})")
             tqdm_log(f"{'='*62}")
 
-            # ── Inner loop: rows ──────────────────────────────────────────────
             row_bar = tqdm(indices, desc=f"  {model[:22]}", unit="row",
                            colour="cyan", dynamic_ncols=True, leave=False)
 
@@ -563,32 +630,31 @@ def run_categorization(args):
                 preview    = actionable[:45]
                 row_bar.set_postfix_str(f"{preview}…", refresh=True)
 
-                # ── Innermost loop: categories ────────────────────────────────
-                cat_bar = tqdm(CATEGORIES.items(), desc="    cats",
-                               unit="cat", leave=False, dynamic_ncols=True)
+                # Single call — model returns comma-separated numbers
+                raw = ollama_generate(
+                    model,
+                    build_category_prompt(actionable),
+                    args.ollama_url, args.timeout, args.keep_alive,
+                    early_exit=False,   # need full response for category numbers
+                )
 
-                for cat_name, cat_def in cat_bar:
-                    cat_bar.set_postfix_str(cat_name[:32], refresh=True)
-                    raw      = ollama_generate(
-                        model,
-                        build_category_prompt(actionable, cat_name, cat_def),
-                        args.ollama_url, args.timeout, args.keep_alive,
-                    )
-                    decision = parse_yes_no(raw)
+                matched_nums = parse_category_numbers(raw)
+
+                for i, cat_name in enumerate(CATEGORY_KEYS, start=1):
+                    decision = "YES" if i in matched_nums else "NO"
                     out_df.at[idx, f"cat_{cat_name}__{model}"] = decision
-                    if args.delay > 0:
-                        time.sleep(args.delay)
 
-                tqdm_log(f"    row {idx+1:>5} done  | {preview}…")
+                tqdm_log(
+                    f"    row {idx+1:>5}  cats={sorted(matched_nums)}  | {preview}…"
+                )
 
-            # Free VRAM before next model loads
+                if args.delay > 0:
+                    time.sleep(args.delay)
+
             unload_model(model, args.ollama_url)
-
-            # Checkpoint after every complete model pass
             out_df.to_csv(args.output, index=False)
-            tqdm_log(f"  ✓ checkpoint saved after {model}")
+            tqdm_log(f"  ✓ checkpoint saved → {args.output}")
 
-    # ── Compute per-category verdicts and assigned_categories ─────────────────
     tqdm_log("\nComputing category verdicts...")
     for idx in indices:
         assigned = []
@@ -607,7 +673,7 @@ def run_categorization(args):
         out_df.at[idx, "num_categories"] = len(assigned)
 
     out_df.to_csv(args.output, index=False)
-    log.info("Done. Output: %s", args.output)
+    log.info("✓ Categorization complete. Output saved → %s", args.output)
 
     total = out_df["assigned_categories"].notna().sum()
     print("\n" + "=" * 65)
@@ -632,21 +698,39 @@ def main():
     parser = argparse.ArgumentParser(
         description="ReACT Scorer — soundness/preciseness + category assignment via Ollama"
     )
-    parser.add_argument("--mode",       choices=["score", "categorize"], required=True)
-    parser.add_argument("--input",  "-i", required=True, help="Path to input CSV")
-    parser.add_argument("--output", "-o", required=True, help="Path for output CSV")
+    parser.add_argument("--mode", choices=["score", "categorize"], required=True)
+    parser.add_argument("--input",  "-i", default=None,
+                        help="Path to input CSV (default: auto-set per mode)")
+    parser.add_argument("--output", "-o", default=None,
+                        help="Path for output CSV (default: auto-set per mode)")
     parser.add_argument("--ollama_url",  default="http://localhost:11434")
     parser.add_argument("--keep_alive",  default="120m",
                         help="How long to keep model in VRAM between calls (default: 120m)")
     parser.add_argument("--timeout",     type=int,   default=600,
                         help="Seconds per Ollama call (default: 600)")
     parser.add_argument("--delay",       type=float, default=0.0,
-                        help="Extra sleep between calls — 0 is fine with streaming (default: 0)")
+                        help="Extra sleep between calls (default: 0)")
     parser.add_argument("--resume",      action="store_true",
-                        help="Skip rows already completed in an existing output file")
+                        help="Skip rows already completed (matched by actionable+impact+evidence key)")
     parser.add_argument("--limit",       type=int,   default=None,
                         help="Process only first N rows (for testing)")
     args = parser.parse_args()
+
+    # ── Auto-set paths based on mode ──────────────────────────────────────────
+    if args.mode == "score":
+        if args.input  is None: args.input  = DEFAULT_INPUT
+        if args.output is None: args.output = DEFAULT_SCORED
+    else:
+        if args.input  is None: args.input  = DEFAULT_SCORED
+        if args.output is None: args.output = DEFAULT_CATEGORIZED
+
+    # ── Validate input ────────────────────────────────────────────────────────
+    if not Path(args.input).exists():
+        log.error("Input file not found: %s", args.input)
+        raise SystemExit(1)
+
+    # ── Ensure output directory exists ────────────────────────────────────────
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
 
     if args.mode == "score":
         run_scoring(args)
