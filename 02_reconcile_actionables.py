@@ -80,6 +80,7 @@ import argparse
 import textwrap
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from tqdm import tqdm
 import multiprocessing
 
 # Force 'spawn' start method so child processes don't inherit
@@ -657,17 +658,26 @@ def _plot_calibration(
     names: list,
 ) -> None:
     """
-    Save a four-panel PNG:
+    Save a five-panel PNG:
       Panel 1 — Coarse avg_F1 + per-benchmark F1 curves (full range)
       Panel 2 — Fine-zoom avg_F1 curves (±0.05 around best)
       Panel 3 — Score histogram: STS15 same vs different
       Panel 4 — Score histogram: SICK-R same vs different
+      Panel 5 — ROC curve (TPR vs FPR) for every θ on both benchmarks
 
-    Reading the chart:
-      • Panel 1 shows the global shape and whether both benchmarks agree.
-        If their F1 peaks are far apart, the similarity metric needs work.
-      • Panel 2 gives the precise optimal θ at 0.005 resolution.
-      • Panels 3 & 4 confirm θ sits in the gap between distributions.
+    READING THE ROC CURVE
+    ─────────────────────
+    Each point on the ROC curve corresponds to one θ value.  Moving
+    right along the curve (lower θ) increases both TPR (recall) and FPR
+    (false positives).  Moving left (higher θ) increases precision but
+    loses recall.
+
+    A random classifier follows the diagonal.  A perfect classifier
+    hits the top-left corner (TPR=1, FPR=0).  The chosen θ is marked
+    on each curve so you can see where it sits in the TPR/FPR tradeoff.
+
+    AUC (Area Under Curve) is shown in the legend.  Higher = better
+    discriminative power regardless of the chosen threshold.
     """
     try:
         import matplotlib
@@ -682,8 +692,10 @@ def _plot_calibration(
     AVG_COLOR    = "#FFD54F"
     BEST_COLOR   = "#FF7043"
 
-    n_bench = len(names)
-    fig, axes = plt.subplots(1, 2 + n_bench, figsize=(6 * (2 + n_bench), 5.5))
+    # 5 panels: coarse | fine | hist×n_bench | ROC
+    n_bench   = len(names)
+    n_panels  = 2 + n_bench + 1          # +1 for ROC
+    fig, axes = plt.subplots(1, n_panels, figsize=(6 * n_panels, 5.5))
     fig.patch.set_facecolor(BG)
     for ax in axes:
         ax.set_facecolor(PANEL)
@@ -693,12 +705,10 @@ def _plot_calibration(
 
     def _draw_panel(ax, df, title, mark=True):
         thetas = df["theta"].values
-        # Per-benchmark F1
         for i, n in enumerate(names):
             ax.plot(thetas, df[f"f1_{n}"].values, "o-",
                     color=BENCH_COLORS[i % len(BENCH_COLORS)],
                     lw=1.5, ms=3, alpha=0.75, label=f"F1 {n}")
-        # Average F1
         ax.plot(thetas, df["avg_f1"].values, "D-",
                 color=AVG_COLOR, lw=2.5, ms=5, zorder=5, label="avg F1")
         if mark and best_theta in df["theta"].values:
@@ -725,9 +735,9 @@ def _plot_calibration(
     _draw_panel(axes[0], coarse_df,
                 "Phase 1 — Coarse sweep\n(0.01→0.95, step 0.02)", mark=True)
     _draw_panel(axes[1], fine_df,
-                f"Phase 2 — Fine zoom\n(±0.05 around peak, step 0.005)", mark=True)
+                "Phase 2 — Fine zoom\n(±0.05 around peak, step 0.005)", mark=True)
 
-    # Histograms per benchmark
+    # ── Histograms per benchmark ──────────────────────────────────────────────
     for k, (cfg, df_b) in enumerate(benchmark_data):
         ax = axes[2 + k]
         same = df_b.loc[ df_b["ground_truth"], "our_sim"].values
@@ -749,6 +759,71 @@ def _plot_calibration(
         ax.legend(facecolor="#252836", edgecolor="#444455",
                   labelcolor="white", fontsize=8)
         ax.grid(True, color=GRID, lw=0.6, alpha=0.7)
+
+    # ── ROC curve panel ───────────────────────────────────────────────────────
+    ax_roc = axes[2 + n_bench]
+
+    # Sort θ descending so we sweep from strict (low TPR, low FPR) to
+    # permissive (high TPR, high FPR) — standard ROC orientation.
+    thetas_sorted = sorted(coarse_df["theta"].values, reverse=True)
+
+    for k, (cfg, df_b) in enumerate(benchmark_data):
+        sims = df_b["our_sim"]
+        gt   = df_b["ground_truth"]
+        n_pos = int(gt.sum())
+        n_neg = len(gt) - n_pos
+
+        tprs, fprs = [], []
+        for theta in thetas_sorted:
+            pred = sims >= theta
+            tp = int(( pred &  gt).sum())
+            fp = int(( pred & ~gt).sum())
+            tpr = tp / n_pos if n_pos else 0.0
+            fpr = fp / n_neg if n_neg else 0.0
+            tprs.append(tpr)
+            fprs.append(fpr)
+
+        # AUC via trapezoidal rule (descending FPR → reverse for np.trapz)
+        fprs_arr = np.array(fprs)
+        tprs_arr = np.array(tprs)
+        order    = np.argsort(fprs_arr)
+        # np.trapz was renamed to np.trapezoid in NumPy 2.0
+        _trapz = getattr(np, 'trapezoid', None) or getattr(np, 'trapz', None)
+        auc    = float(_trapz(tprs_arr[order], fprs_arr[order]))
+
+        color = BENCH_COLORS[k % len(BENCH_COLORS)]
+        ax_roc.plot(fprs, tprs, "o-", color=color, lw=2, ms=3,
+                    label=f"{cfg['name']}  AUC={auc:.3f}")
+
+        # Mark the chosen θ on this curve
+        best_idx = min(range(len(thetas_sorted)),
+                       key=lambda i: abs(thetas_sorted[i] - best_theta))
+        ax_roc.scatter([fprs[best_idx]], [tprs[best_idx]],
+                       color=BEST_COLOR, s=90, zorder=6,
+                       edgecolors="white", lw=1)
+        ax_roc.annotate(f"θ={best_theta}",
+                        xy=(fprs[best_idx], tprs[best_idx]),
+                        xytext=(fprs[best_idx] + 0.04,
+                                tprs[best_idx] - 0.08),
+                        color=BEST_COLOR, fontsize=8,
+                        arrowprops=dict(arrowstyle="->",
+                                        color=BEST_COLOR, lw=1))
+
+    # Random-classifier diagonal
+    ax_roc.plot([0, 1], [0, 1], "--", color="#555566", lw=1,
+                alpha=0.6, label="Random classifier")
+
+    ax_roc.set_xlabel("False Positive Rate  (1 − Specificity)",
+                      color="#CCCCCC", fontsize=10)
+    ax_roc.set_ylabel("True Positive Rate  (Recall / Sensitivity)",
+                      color="#CCCCCC", fontsize=10)
+    ax_roc.set_title("ROC Curve\n(per benchmark, θ marked)",
+                     color="white", fontsize=10, fontweight="bold")
+    ax_roc.set_xlim(-0.02, 1.02)
+    ax_roc.set_ylim(-0.02, 1.02)
+    ax_roc.legend(facecolor="#252836", edgecolor="#444455",
+                  labelcolor="white", fontsize=8)
+    ax_roc.grid(True, color=GRID, lw=0.6, alpha=0.7)
 
     ens = f"{W_LEXICAL:.0%} lexical + {W_SEMANTIC:.0%} semantic"
     fig.suptitle(
@@ -1365,6 +1440,7 @@ def main(
     fixed_theta: float     = None,
     n_workers: int         = None,
     min_support: int       = None,
+    limit: int             = None,
 ) -> None:
     """
     Orchestrate calibration → reconciliation.
@@ -1376,6 +1452,8 @@ def main(
     fixed_theta      : explicit θ override (used when skip_calibration=True)
     n_workers        : worker processes (None = use N_WORKERS global)
     min_support      : minimum cluster support (None = use MIN_SUPPORT global)
+    limit            : process only the first N articles (None = all).
+                       Useful for quick smoke-tests or debugging a subset.
     """
     global SIM_THRESHOLD, MIN_SUPPORT, N_WORKERS
 
@@ -1410,20 +1488,41 @@ def main(
     df["_article_key"] = (df["venue"].astype(str) + "||"
                           + df["article_title"].astype(str))
     article_keys = df["_article_key"].unique()
-    print(f"  Unique articles: {len(article_keys)}")
+
+    if limit is not None and limit > 0:
+        article_keys = article_keys[:limit]
+        print(f"  Unique articles: {len(df['_article_key'].unique())} total "
+              f"→ processing first {len(article_keys)} (--limit {limit})")
+    else:
+        print(f"  Unique articles: {len(article_keys)}")
 
     # ── Step 3: process articles ──────────────────────────────────────────────
     all_canonical = []
-    workers = min(N_WORKERS, len(article_keys))
+    workers       = min(N_WORKERS, len(article_keys))
+    n_articles    = len(article_keys)
+
+    # tqdm bar shared by both sequential and parallel paths.
+    # Shows: progress bar | done/total articles | elapsed | ETA | rate
+    bar_fmt = ("{l_bar}{bar}| {n_fmt}/{total_fmt} articles "
+               "[{elapsed}<{remaining}, {rate_fmt}]")
 
     if workers <= 1:
-        # Sequential (easier to debug)
-        for akey in article_keys:
-            rows = df[df["_article_key"] == akey]
-            canonical = process_article(akey, rows, LOG_DIR, calibrated_theta)
-            all_canonical.extend(canonical)
+        # ── Sequential ────────────────────────────────────────────────────────
+        with tqdm(total=n_articles, desc="  Reconciling",
+                  unit="art", bar_format=bar_fmt,
+                  dynamic_ncols=True) as pbar:
+            for akey in article_keys:
+                rows = df[df["_article_key"] == akey]
+                canonical = process_article(akey, rows, LOG_DIR, calibrated_theta)
+                all_canonical.extend(canonical)
+                # Show the short article title in the postfix so you know
+                # which article just finished without scrolling the log.
+                short = akey.split("||")[-1][:40]
+                pbar.set_postfix_str(short, refresh=True)
+                pbar.update(1)
     else:
-        print(f"\n  Parallel: {workers} workers across {len(article_keys)} articles")
+        # ── Parallel ──────────────────────────────────────────────────────────
+        print(f"\n  Parallel: {workers} workers across {n_articles} articles")
         tasks = [
             (akey,
              df[df["_article_key"] == akey].to_dict(orient="list"),
@@ -1434,9 +1533,18 @@ def main(
         ctx = multiprocessing.get_context('spawn')
         with ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as pool:
             futures = {pool.submit(_worker, t): t[0] for t in tasks}
-            for future in as_completed(futures):
-                akey, canonical = future.result()
-                all_canonical.extend(canonical)
+            # as_completed() yields futures in completion order (fastest first),
+            # so the bar advances as soon as any worker finishes — not in
+            # submission order.  This gives a more accurate ETA.
+            with tqdm(total=n_articles, desc="  Reconciling",
+                      unit="art", bar_format=bar_fmt,
+                      dynamic_ncols=True) as pbar:
+                for future in as_completed(futures):
+                    akey, canonical = future.result()
+                    all_canonical.extend(canonical)
+                    short = akey.split("||")[-1][:40]
+                    pbar.set_postfix_str(short, refresh=True)
+                    pbar.update(1)
 
     # ── Step 4: write master CSV ──────────────────────────────────────────────
     if all_canonical:
@@ -1497,6 +1605,11 @@ if __name__ == "__main__":
         help=f"Parallel worker processes (default: {N_WORKERS} CPUs). "
              "Set 1 for sequential/debug mode.",
     )
+    parser.add_argument(
+        "--limit", type=int, default=None,
+        help="Process only the first N articles (default: all). "
+             "Useful for smoke-testing or debugging a small subset.",
+    )
     args = parser.parse_args()
 
     main(
@@ -1505,4 +1618,5 @@ if __name__ == "__main__":
         fixed_theta=args.theta,
         n_workers=args.workers,
         min_support=args.min_support,
+        limit=args.limit,
     )
