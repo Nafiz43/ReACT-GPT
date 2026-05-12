@@ -123,6 +123,16 @@
 # python3 01_run_llm.py --model_name=qwen3.6:35b --prompting_method=CoT --reports_to_process=-1 >> log-files/qwen3.6:35b_CoT_temp0.txt
 # python3 01_run_llm.py --model_name=llama3.1:8b --prompting_method=CoT --reports_to_process=-1>> log-files/llama3.1:8b_CoT_temp0.txt
 
+# 01_run_ensure_models_availability
+# ollama run deepseek-r1:32b 
+# ollama run gemma4:31b
+# ollama run gpt-oss:20b
+# ollama run qwen3.6:35b
+# ollama run mixtral:8x7b
+
+
+
 python3 01_run_llm.py --model_name=gpt-oss:20b --prompting_method=CoT --reports_to_process=-1>> log-files/gpt-oss:20b_CoT_temp0.txt
 python3 01_run_llm.py --model_name=gemma4:31b --prompting_method=CoT --reports_to_process=-1>> log-files/gemma4_CoT_temp0.txt
 python3 01_run_llm.py --model_name=deepseek-r1:32b --prompting_method=CoT --reports_to_process=-1>> log-files/deepseek-r1:32b_CoT_temp0.txt
+
