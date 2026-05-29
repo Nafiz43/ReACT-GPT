@@ -3,32 +3,30 @@
 gen_react_network.py
 
 Generates an interactive Category → Actionable network from:
-    results/Final ReACT-LLM Set.csv
+    local_history/final_set.csv
 
-Columns used:
-    COUNT, AricleTile, ACTIONABLE, CATEGORY, IMPACT,
-    EMPIRICAL EVIDENCE, CONFIDENCE, SOUND, PRECISE
+Columns used (final_set.csv schema):
+    article_title, CATEGORY, actionable, impact,
+    evidence, avg_confidence, SOUND, PRECISE, support
 
-Graph: Category nodes (left hub) ↔ Actionable nodes (right detail)
-       One edge per unique (CATEGORY, ACTIONABLE) pair.
+CATEGORY may contain pipe-separated values, e.g.:
+    "Automated Testing | CI/CD and DevOps Automation"
+Only the 8 canonical categories are kept; one edge is created
+per unique (category, actionable) pair so actionables can fan
+out to multiple category hubs.
 
-Detail panel fields shown on actionable click:
-    ACTIONABLE, IMPACT, EMPIRICAL EVIDENCE, CONFIDENCE,
-    SOUND, PRECISE, CATEGORY, AricleTile
-
-Tooltip on hover: plain text — ACTIONABLE text only (no HTML).
-
-Architecture (identical to OVC gen_net_graph_all.py v12):
-  • ALL_NODES  — vis-only props, sanitized through VIS_NODE_KEYS whitelist
-  • ALL_NODE_META — application data, never touches vis DataSet
+Architecture:
+  • ALL_NODES       — vis-only props, sanitized through VIS_NODE_KEYS whitelist
+  • ALL_NODE_META   — application data, never touches vis DataSet
   • BAKED_EMBEDDINGS — node vectors pre-computed in Python, baked into HTML
   • Transformers.js — loads only for query embedding (~2–3 s, browser-cached)
-  • Physics — Barnes-Hut, runs once on first load then freezes
-  • Search — Enter / button only, semantic + keyword modes
+  • Physics         — Barnes-Hut, runs once then freezes
+  • Search          — Enter / button only, semantic + keyword modes
+  • NOTE: search matches ONLY against the "impact" field of actionable nodes
 
 Usage
 ─────
-    pip install sentence-transformers tqdm numpy
+    pip install sentence-transformers numpy tqdm
     python gen_react_network.py
     python gen_react_network.py --skip-embed
     python gen_react_network.py --workers 4
@@ -43,7 +41,9 @@ import csv
 import json
 import math
 import os
-from collections import OrderedDict, defaultdict
+import subprocess
+import sys
+from collections import OrderedDict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -77,15 +77,59 @@ except ImportError:
 
 # ── defaults ───────────────────────────────────────────────────────────────────
 
-DEFAULT_INPUT_CSV = Path("results/Final ReACT-LLM Set.csv")
+DEFAULT_INPUT_CSV   = Path("local_history/final_set.csv")
 DEFAULT_OUTPUT_HTML = Path("results/react_llm_category_network.html")
 
-REQUIRED_COLUMNS = [
-    "ACTIONABLE", "CATEGORY", "AricleTile",
-]
+# Canonical categories — only these 8 are kept; anything else is discarded
+CANONICAL_CATEGORIES = {
+    "New Contributor Onboarding and Involvement",
+    "Code Standards and Maintainability",
+    "Automated Testing and Quality Assurance",
+    "Community Collaboration and Engagement",
+    "Documentation Practices",
+    "Project Management and Governance",
+    "Security Best Practices and Legal Compliance",
+    "CI/CD and DevOps Automation",
+}
 
-# Optional columns — present if available, shown as N/A otherwise
-OPTIONAL_COLUMNS = ["COUNT", "IMPACT", "EMPIRICAL EVIDENCE", "CONFIDENCE", "SOUND", "PRECISE"]
+REQUIRED_COLUMNS = ["actionable", "CATEGORY", "article_title"]
+OPTIONAL_COLUMNS = ["support", "impact", "evidence", "avg_confidence", "SOUND", "PRECISE"]
+
+
+# ── dependency check ───────────────────────────────────────────────────────────
+
+def ensure_embedding_deps() -> bool:
+    """Return True if embedding deps are present (installing if needed)."""
+    global HAS_ST, HAS_NP
+    if HAS_ST and HAS_NP:
+        return True
+    missing = []
+    if not HAS_NP:
+        missing.append("numpy")
+    if not HAS_ST:
+        missing.append("sentence-transformers")
+    print(f"\n  ⚠  Missing packages for baked embeddings: {', '.join(missing)}")
+    print(f"     Attempting: {sys.executable} -m pip install {' '.join(missing)}")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet"] + missing
+        )
+    except subprocess.CalledProcessError:
+        print("  ✗  Auto-install failed. Run manually:")
+        print(f"       pip install {' '.join(missing)}")
+        return False
+    # Re-import after install
+    try:
+        import numpy as np_
+        import sentence_transformers as st_
+        HAS_NP = True
+        HAS_ST = True
+        globals()["np"] = np_
+        globals()["SentenceTransformer"] = st_.SentenceTransformer
+        print("  ✓  Packages installed successfully.")
+        return True
+    except ImportError:
+        return False
 
 
 # ── text helpers ───────────────────────────────────────────────────────────────
@@ -96,17 +140,25 @@ def normalize_text(value: str) -> str:
 def safe_col(row: Dict[str, str], col: str) -> str:
     return normalize_text(row.get(col, "") or "")
 
+def split_categories(raw: str) -> List[str]:
+    """Split a pipe-delimited CATEGORY string and filter to canonical set."""
+    parts = [p.strip() for p in raw.split("|") if p.strip()]
+    return [p for p in parts if p in CANONICAL_CATEGORIES]
+
 
 # ── CSV reader ─────────────────────────────────────────────────────────────────
 
-def read_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
+def read_csv_rows(csv_path: Path) -> List[Dict]:
     if not csv_path.exists():
         raise FileNotFoundError(f"Input CSV not found: {csv_path}")
 
     with csv_path.open("r", encoding="utf-8-sig") as f:
         total = sum(1 for _ in f) - 1
 
-    rows: List[Dict[str, str]] = []
+    rows: List[Dict] = []
+    skipped_no_action = 0
+    skipped_no_cat    = 0
+
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames is None:
@@ -118,9 +170,23 @@ def read_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
         with tqdm(reader, total=total, desc="  Reading CSV", unit="row") as bar:
             for row in bar:
                 cleaned = {k: normalize_text(v or "") for k, v in row.items()}
-                if not cleaned.get("ACTIONABLE") or not cleaned.get("CATEGORY"):
+
+                if not cleaned.get("actionable"):
+                    skipped_no_action += 1
                     continue
+
+                cats = split_categories(cleaned.get("CATEGORY", ""))
+                if not cats:
+                    skipped_no_cat += 1
+                    continue
+
+                cleaned["_categories"] = cats
                 rows.append(cleaned)
+
+    if skipped_no_action:
+        tqdm.write(f"  [info] Skipped {skipped_no_action} rows with empty actionable.")
+    if skipped_no_cat:
+        tqdm.write(f"  [info] Skipped {skipped_no_cat} rows with no canonical category.")
 
     if not rows:
         raise ValueError("No usable rows found in CSV.")
@@ -130,25 +196,25 @@ def read_csv_rows(csv_path: Path) -> List[Dict[str, str]]:
 # ── graph payload builder ──────────────────────────────────────────────────────
 
 def build_graph_payload(
-    rows: List[Dict[str, str]],
+    rows: List[Dict],
 ) -> Tuple[List[dict], List[dict], List[dict], dict, List[str], List[str]]:
 
-    # category → vis id
     category_to_id: OrderedDict = OrderedDict()
-    # actionable key → vis id  (key = full text to deduplicate)
     actionable_to_id: OrderedDict = OrderedDict()
     actionable_to_meta: Dict[str, dict] = {}
 
     edges_seen: set = set()
     edges: List[dict] = []
 
-    with tqdm(rows, desc="  Building nodes/edges", unit="row") as bar:
+    # ── Pass 1: collect unique categories & actionables ────────────────────────
+    with tqdm(rows, desc="  Building nodes", unit="row") as bar:
         for row in bar:
-            cat  = safe_col(row, "CATEGORY")
-            act  = safe_col(row, "ACTIONABLE")
+            cats = row["_categories"]
+            act  = safe_col(row, "actionable")
 
-            if cat not in category_to_id:
-                category_to_id[cat] = f"C_{len(category_to_id) + 1}"
+            for cat in cats:
+                if cat not in category_to_id:
+                    category_to_id[cat] = f"C_{len(category_to_id) + 1}"
 
             if act not in actionable_to_id:
                 visid = f"A_{len(actionable_to_id) + 1}"
@@ -158,51 +224,57 @@ def build_graph_payload(
                     "short_label":      f"a{len(actionable_to_id)}",
                     "node_type":        "actionable",
                     "actionable":       act,
-                    "category":         cat,
-                    "article_title":    safe_col(row, "AricleTile"),
-                    "impact":           safe_col(row, "IMPACT"),
-                    "empirical_evidence": safe_col(row, "EMPIRICAL EVIDENCE"),
-                    "confidence":       safe_col(row, "CONFIDENCE"),
+                    "categories":       list(cats),
+                    "article_title":    safe_col(row, "article_title"),
+                    "impact":           safe_col(row, "impact"),
+                    "empirical_evidence": safe_col(row, "evidence"),
+                    "confidence":       safe_col(row, "avg_confidence"),
                     "sound":            safe_col(row, "SOUND"),
                     "precise":          safe_col(row, "PRECISE"),
-                    "count":            safe_col(row, "COUNT"),
+                    "count":            safe_col(row, "support"),
                 }
+            else:
+                existing = set(actionable_to_meta[act]["categories"])
+                for cat in cats:
+                    if cat not in existing:
+                        actionable_to_meta[act]["categories"].append(cat)
+                        existing.add(cat)
 
-    # edges — one per unique (category, actionable) pair
+    # ── Pass 2: one edge per unique (category_id, actionable_id) pair ──────────
     edge_counter = 1
     with tqdm(rows, desc="  Building edges", unit="row") as bar:
         for row in bar:
-            cat = safe_col(row, "CATEGORY")
-            act = safe_col(row, "ACTIONABLE")
-            cid = category_to_id[cat]
+            act = safe_col(row, "actionable")
             aid = actionable_to_id[act]
-            ek  = (cid, aid)
-            if ek in edges_seen:
-                continue
-            edges_seen.add(ek)
-            edges.append({"id": f"E_{edge_counter}", "from": cid, "to": aid, "width": 1.6})
-            edge_counter += 1
+            for cat in row["_categories"]:
+                cid = category_to_id[cat]
+                ek  = (cid, aid)
+                if ek in edges_seen:
+                    continue
+                edges_seen.add(ek)
+                edges.append({"id": f"E_{edge_counter}", "from": cid, "to": aid, "width": 1.6})
+                edge_counter += 1
 
-    # ── build vis nodes + node_meta (split cleanly) ────────────────────────────
+    # ── Serialise actionable vis-nodes + node_meta ─────────────────────────────
     all_ids_ordered:   List[str] = []
     all_texts_ordered: List[str] = []
-    nodes:     List[dict] = []   # vis-only — safe for DataSet
-    node_meta: List[dict] = []   # application data — never touches DataSet
+    nodes:     List[dict] = []
+    node_meta: List[dict] = []
 
     with tqdm(actionable_to_id.items(), desc="  Serialising actionables",
               unit="node", total=len(actionable_to_id)) as bar:
         for act, visid in bar:
             meta = actionable_to_meta[act]
-            semantic_text = " ".join(filter(None, [
-                meta["actionable"], meta["category"],
-                meta["impact"], meta["article_title"],
-            ]))
-            search_blob = " ".join([
-                meta["short_label"], meta["actionable"], meta["category"],
-                meta["impact"], meta["article_title"],
-                meta["empirical_evidence"], meta["confidence"],
-                meta["sound"], meta["precise"],
-            ]).lower()
+
+            # ── SEARCH TARGET: only the "impact" field ─────────────────────────
+            # semantic_text drives the baked embedding (cosine similarity search).
+            # search_blob drives keyword matching in the browser.
+            # Both are restricted to the impact field so search only surfaces
+            # nodes whose impact description matches the query.
+            semantic_text = meta["impact"] or ""
+            search_blob   = (meta["impact"] or "").lower()
+            # ──────────────────────────────────────────────────────────────────
+
             all_ids_ordered.append(visid)
             all_texts_ordered.append(semantic_text)
             nodes.append({
@@ -222,7 +294,7 @@ def build_graph_payload(
                 "id":               visid,
                 "node_type":        "actionable",
                 "actionable":       meta["actionable"],
-                "category":         meta["category"],
+                "categories":       meta["categories"],
                 "article_title":    meta["article_title"],
                 "impact":           meta["impact"],
                 "empirical_evidence": meta["empirical_evidence"],
@@ -234,11 +306,14 @@ def build_graph_payload(
                 "semantic_text":    semantic_text,
             })
 
+    # ── Serialise category vis-nodes ───────────────────────────────────────────
     with tqdm(category_to_id.items(), desc="  Serialising categories",
               unit="node", total=len(category_to_id)) as bar:
         for cat, visid in bar:
-            semantic_text = cat
-            search_blob   = cat.lower()
+            # Categories carry no impact text; they surface only when a connected
+            # actionable's impact matches the query (handled in JS adjacency logic).
+            semantic_text = ""
+            search_blob   = ""
             all_ids_ordered.append(visid)
             all_texts_ordered.append(semantic_text)
             nodes.append({
@@ -263,7 +338,7 @@ def build_graph_payload(
             })
 
     stats = {
-        "row_count":       len(rows),
+        "row_count":        len(rows),
         "actionable_count": len(actionable_to_id),
         "category_count":   len(category_to_id),
         "edge_count":       len(edges),
@@ -286,17 +361,17 @@ def _worker_embed(args: Tuple[List[str], int]) -> Tuple[int, List[str]]:
 
 
 def embed_texts(texts: List[str], n_workers: int = 1) -> Optional[List[str]]:
+    """Encode texts with sentence-transformers; returns base64 float32 vectors."""
     if not (HAS_ST and HAS_NP):
-        tqdm.write("  [SKIP] sentence-transformers or numpy not installed.")
-        tqdm.write("         pip install sentence-transformers numpy")
         return None
 
     n = len(texts)
     n_workers  = max(1, min(n_workers, os.cpu_count() or 1, math.ceil(n / 50)))
     chunk_size = math.ceil(n / n_workers)
-    chunks     = [(texts[i:i+chunk_size], i//chunk_size) for i in range(0, n, chunk_size)]
+    chunks     = [(texts[i:i + chunk_size], i // chunk_size)
+                  for i in range(0, n, chunk_size)]
 
-    tqdm.write(f"  Embedding {n} texts across {n_workers} worker(s) ({chunk_size}/worker) …")
+    tqdm.write(f"  Embedding {n} texts across {n_workers} worker(s) …")
     results: List[Optional[List[str]]] = [None] * len(chunks)
 
     if n_workers == 1:
@@ -315,7 +390,7 @@ def embed_texts(texts: List[str], n_workers: int = 1) -> Optional[List[str]]:
     for r in results:
         flat.extend(r)
     kb = sum(len(e) for e in flat) // 1024
-    tqdm.write(f"  Embedded {len(flat)} vectors → {kb} KB (baked into HTML)")
+    tqdm.write(f"  ✓  Embedded {len(flat)} vectors → {kb} KB (baking into HTML)")
     return flat
 
 
@@ -364,17 +439,14 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     html{transition:background .25s,color .25s}
     html,body{height:100%;font-family:'IBM Plex Sans',system-ui,sans-serif;
               background:var(--bg);color:var(--text)}
-
     div.vis-tooltip{
       position:absolute;visibility:hidden;padding:8px 11px;max-width:340px;
       white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;
       color:var(--text);background:var(--surface);border:1px solid var(--border);
       border-radius:10px;box-shadow:var(--shadow);z-index:10;pointer-events:none
     }
-
     .app{display:flex;height:100vh;overflow:hidden}
     .main{display:flex;flex-direction:column;flex:1 1 0;min-width:0;overflow:hidden}
-
     /* topbar */
     .topbar{background:var(--surface);border-bottom:1px solid var(--border);
             padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex-shrink:0}
@@ -387,7 +459,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                border-radius:99px;border:1px solid var(--border);
                background:var(--surface2);color:var(--muted)}
     .stat-chip b{color:var(--text)}
-
     /* ai pill */
     .ai-pill{display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:200px;
              padding:5px 11px;border-radius:99px;font-size:11px;font-weight:700;
@@ -406,12 +477,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                       width:0%;transition:width .25s ease}
     .ai-pill.loading .ai-dot{animation:pulse .8s ease-in-out infinite alternate}
     @keyframes pulse{from{opacity:.3}to{opacity:1}}
-
     /* stabilisation overlay */
     .stab-overlay{position:absolute;inset:0;display:flex;flex-direction:column;
                   align-items:center;justify-content:center;gap:12px;z-index:6;
-                  background:var(--stab-bg);backdrop-filter:blur(4px);
-                  transition:opacity .4s}
+                  background:var(--stab-bg);backdrop-filter:blur(4px);transition:opacity .4s}
     .stab-overlay.hidden{opacity:0;pointer-events:none}
     .stab-spinner{width:36px;height:36px;border:3px solid var(--border);
                   border-top-color:var(--accent);border-radius:50%;
@@ -421,10 +490,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .stab-bar-track{width:220px;height:4px;border-radius:99px;background:var(--border)}
     .stab-bar-fill{height:100%;border-radius:99px;background:var(--accent);
                    width:0%;transition:width .2s}
-
     /* network */
-    .net-wrap{flex:1 1 0;min-height:0;position:relative;
-              background:var(--net-bg)}
+    .net-wrap{flex:1 1 0;min-height:0;position:relative;background:var(--net-bg)}
     #mynetwork{width:100%;height:100%}
     .net-toolbar{position:absolute;top:12px;left:12px;right:12px;display:flex;
                  justify-content:space-between;align-items:center;gap:10px;
@@ -437,7 +504,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
             border:1px solid var(--border);border-radius:10px;padding:6px 12px}
     .legend-item{display:flex;align-items:center;gap:5px}
     .leg-dot{width:9px;height:9px;border-radius:50%}
-
     /* side panel */
     .side{flex:0 0 340px;width:340px;height:100vh;overflow-y:auto;
           background:var(--surface);border-left:1px solid var(--border);
@@ -449,7 +515,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                   letter-spacing:.07em;color:var(--muted);margin-bottom:8px}
     .badge{background:#eff6ff;color:#1d4ed8;border-radius:99px;
            padding:2px 7px;font-size:10px;font-weight:800}
-
     /* search */
     .search-row{display:flex;gap:6px;align-items:center}
     .search-wrap{position:relative;flex:1}
@@ -470,7 +535,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                 cursor:pointer;font-family:'IBM Plex Sans',sans-serif;
                 transition:opacity .15s;white-space:nowrap}
     .search-btn:hover{opacity:.85}
-
     /* mode banner */
     .search-mode-banner{display:flex;align-items:center;gap:6px;padding:5px 9px;
                         border-radius:7px;font-size:10px;font-weight:700;
@@ -481,7 +545,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .search-mode-banner.smb-keyword {background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
     .search-mode-banner.smb-fallback{background:#fffbeb;border-color:#fcd34d;color:#92400e}
     .search-mode-banner.smb-error   {background:#fef2f2;border-color:#fca5a5;color:#991b1b}
-
     /* threshold / mode toggle */
     .threshold-row{display:flex;align-items:center;gap:8px;margin-top:6px;
                    font-size:11px;color:var(--muted)}
@@ -493,7 +556,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                border:1px solid var(--border);background:var(--surface2);color:var(--muted);
                cursor:pointer;transition:all .15s}
     .mode-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-
     /* syntax hint */
     .syntax-hint{background:var(--surface2);border:1px solid var(--border);
                  border-radius:8px;padding:8px 10px;margin-top:6px;
@@ -502,7 +564,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .syntax-hint code{font-family:'IBM Plex Mono',monospace;font-size:10px;
                       background:var(--border);border-radius:3px;padding:1px 4px;color:var(--text)}
     .hint-row{display:flex;justify-content:space-between;gap:6px}
-
     /* buttons */
     .btn-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
     .btn{padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;
@@ -511,7 +572,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .btn:hover{opacity:.85;transform:translateY(-1px)}
     .btn-primary  {background:var(--accent);color:#fff}
     .btn-secondary{background:var(--surface2);color:var(--text);border-color:var(--border)}
-
     /* stats */
     .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
     .stat-box{background:var(--surface2);border:1px solid var(--border);
@@ -519,10 +579,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .stat-label{font-size:10px;color:var(--muted);margin-bottom:3px;
                 text-transform:uppercase;letter-spacing:.05em}
     .stat-val{font-size:20px;font-weight:800;font-family:'IBM Plex Mono',monospace}
-
     /* category list */
-    .group-list{display:flex;flex-direction:column;gap:5px;
-                max-height:220px;overflow-y:auto}
+    .group-list{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto}
     .group-item{width:100%;text-align:left;border:1px solid var(--border);
                 background:var(--surface2);color:var(--text);padding:8px 10px;
                 border-radius:9px;font-size:11px;font-weight:600;cursor:pointer;
@@ -535,7 +593,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                color:var(--accent);flex-shrink:0}
     .empty-note{border:1px dashed var(--border);border-radius:9px;padding:9px;
                 color:var(--muted);font-size:11px;text-align:center}
-
     /* detail card */
     .detail-card{background:var(--surface2);border:1px solid var(--border);
                  border-radius:10px;padding:12px;font-size:11px;color:var(--muted);
@@ -551,29 +608,28 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
          font-size:10px;font-weight:700;margin:1px}
     .tag-a{background:rgba(251,106,74,.15);color:#c2410c}
     .tag-c{background:rgba(107,174,214,.15);color:#1d4ed8}
-
-    /* confidence / quality badges */
+    /* multi-category chips in detail panel */
+    .cat-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+    .cat-chip{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10px;
+              font-weight:600;background:rgba(107,174,214,.15);color:#1d4ed8;
+              border:1px solid rgba(107,174,214,.4)}
+    /* quality badges */
     .badge-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
     .qbadge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
             border-radius:6px;font-size:10px;font-weight:700;
             background:var(--surface);border:1px solid var(--border);color:var(--muted)}
     .qbadge.yes{background:#f0fdf4;border-color:#86efac;color:#15803d}
     .qbadge.no {background:#fef2f2;border-color:#fca5a5;color:#991b1b}
-
     /* sim bar */
     .sim-bar-wrap{margin-top:8px}
     .sim-bar-label{font-size:9px;color:var(--muted);margin-bottom:4px;
                    text-transform:uppercase;letter-spacing:.06em}
     .sim-bar-track{height:5px;border-radius:99px;background:var(--border);overflow:hidden}
-    .sim-bar-fill{height:100%;border-radius:99px;background:var(--accent);
-                  transition:width .4s ease}
-
-    .theme-toggle{
-      flex-shrink:0;padding:6px 11px;border-radius:8px;font-size:15px;
-      border:1px solid var(--border);background:var(--surface2);
-      cursor:pointer;line-height:1;transition:border-color .15s,background .2s;
-      display:flex;align-items:center;justify-content:center;
-    }
+    .sim-bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width .4s ease}
+    .theme-toggle{flex-shrink:0;padding:6px 11px;border-radius:8px;font-size:15px;
+                  border:1px solid var(--border);background:var(--surface2);cursor:pointer;
+                  line-height:1;transition:border-color .15s,background .2s;
+                  display:flex;align-items:center;justify-content:center}
     .theme-toggle:hover{border-color:var(--accent)}
     [data-theme="dark"] .group-item.selected{background:#1c2d4a;border-color:#3b82f6;color:#93c5fd}
     [data-theme="dark"] .badge{background:rgba(59,130,246,.2);color:#93c5fd}
@@ -588,6 +644,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     [data-theme="dark"] .ai-pill.error  {border-color:#ef4444;color:#f87171;background:#2b0f0f}
     [data-theme="dark"] .tag-a{background:rgba(249,115,22,.2);color:#fb923c}
     [data-theme="dark"] .tag-c{background:rgba(91,155,213,.2);color:#93c5fd}
+    [data-theme="dark"] .cat-chip{background:rgba(91,155,213,.2);color:#93c5fd;border-color:rgba(91,155,213,.4)}
     @media(max-width:960px){
       .app{flex-direction:column;height:auto}
       .main,.net-wrap{min-height:520px}
@@ -598,7 +655,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <body>
 <div class="app">
   <main class="main">
-
     <div class="topbar">
       <div class="topbar-brand">
         <div class="eyebrow">ReACT-LLM &middot; Actionable Intelligence</div>
@@ -640,18 +696,16 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
       <div id="mynetwork"></div>
     </div>
-
   </main>
 
   <aside class="side">
-
     <div class="side-section">
-      <div class="section-head">Search</div>
+      <div class="section-head">Search <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;color:var(--accent)">&nbsp;(matches Impact field)</span></div>
       <div class="search-row">
         <div class="search-wrap">
           <span class="search-icon">&#128269;</span>
           <input id="searchBox" class="search-input" type="text"
-                 placeholder="Type then press Enter or Search&hellip;"/>
+                 placeholder="Search by impact description&hellip;"/>
           <button class="search-clear" id="searchClear" title="Clear">&#10005;</button>
         </div>
         <button class="search-btn" onclick="commitSearch()">Search</button>
@@ -719,7 +773,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <div class="section-head">Details</div>
       <div id="detailPanel" class="detail-card">Click any node to inspect details.</div>
     </div>
-
   </aside>
 </div>
 
@@ -736,7 +789,7 @@ Object.freeze(ALL_NODES);
 Object.freeze(ALL_NODE_META);
 
 // ── lookup structures ──────────────────────────────────────────────────────────
-const nodeMap    = new Map(ALL_NODE_META.map(m => [String(m.id), m]));
+const nodeMap     = new Map(ALL_NODE_META.map(m => [String(m.id), m]));
 const categoryIds = ALL_NODE_META
   .filter(m => m.node_type === "category")
   .map(m => String(m.id))
@@ -745,9 +798,9 @@ const actionableIds = ALL_NODE_META
   .filter(m => m.node_type === "actionable")
   .map(m => String(m.id));
 
-// adjacency: category → actionables, actionable → categories
-const catToActions  = new Map(categoryIds.map(id => [id, new Set()]));
-const actionToCats  = new Map(actionableIds.map(id => [id, new Set()]));
+// adjacency — category → actionables, actionable → categories
+const catToActions = new Map(categoryIds.map(id => [id, new Set()]));
+const actionToCats = new Map(actionableIds.map(id => [id, new Set()]));
 for (const e of ALL_EDGES) {
   const f = String(e.from), t = String(e.to);
   if (!catToActions.has(f)) catToActions.set(f, new Set());
@@ -780,14 +833,13 @@ function setAIPill(state, text, pct) {
   if (pct != null) { track.classList.add("visible"); fill.style.width = pct + "%"; }
   else             { track.classList.remove("visible"); fill.style.width = "0%"; }
 }
-
 function setModeBanner(state) {
   const el = document.getElementById("searchModeBanner");
   el.className = "search-mode-banner smb-" +
     (state==="semantic"?"semantic":state==="keyword"?"keyword":state==="error"?"error":"fallback");
   const labels = {
-    semantic: "🧠 Semantic search active",
-    keyword:  "🔤 Keyword search active",
+    semantic: "🧠 Semantic search active — matching Impact field",
+    keyword:  "🔤 Keyword search active — matching Impact field",
     fallback: "⚠ Keyword fallback — semantic model loading…",
     error:    "⚠ Keyword fallback — semantic model unavailable",
   };
@@ -853,7 +905,6 @@ function commitSearch() {
   committedSearch = document.getElementById("searchBox").value.trim();
   runSearch();
 }
-
 async function runSearch() {
   const term = committedSearch;
   if (!term) {
@@ -911,13 +962,18 @@ function scoreKeyword(blob, parsed) {
   }
   return best;
 }
+
+// NOTE: search_blob for actionable nodes contains ONLY the impact field text.
+// Category nodes have an empty search_blob — they surface only when a connected
+// actionable's impact text matches the query (handled by the adjacency expansion
+// in applyStyles / renderCategoryPanel below).
 function buildKeywordScores(term) {
   const parsed = parseQuery(term); simScores = new Map();
   for (const [id, m] of nodeMap)
     simScores.set(id, scoreKeyword((m.search_blob||"").toLowerCase(), parsed));
 }
 
-// ── tooltip: plain text only ───────────────────────────────────────────────────
+// ── tooltip ────────────────────────────────────────────────────────────────────
 function buildTooltip(n) {
   const m = nodeMap.get(String(n.id));
   if (!m) return n.label || String(n.id);
@@ -927,8 +983,7 @@ function buildTooltip(n) {
 
 // ── vis-network ────────────────────────────────────────────────────────────────
 const VIS_NODE_KEYS = new Set([
-  "id","label","shape","size","color",
-  "borderWidth","font","shadow","opacity","title"
+  "id","label","shape","size","color","borderWidth","font","shadow","opacity","title"
 ]);
 function sanitizeVisNode(input) {
   const out = {};
@@ -936,8 +991,7 @@ function sanitizeVisNode(input) {
   return out;
 }
 function visNode(n) {
-  const base = sanitizeVisNode(n);
-  return { ...base, opacity: 1, title: buildTooltip(n) };
+  return { ...sanitizeVisNode(n), opacity: 1, title: buildTooltip(n) };
 }
 
 function initNetwork() {
@@ -961,7 +1015,7 @@ function initNetwork() {
     edges: {selectionWidth:3, hoverWidth:2, smooth:{enabled:true, type:"dynamic"}},
   });
 
-  const overlay = document.getElementById("stabOverlay");
+  const overlay  = document.getElementById("stabOverlay");
   const stabText = document.getElementById("stabText");
   const stabBar  = document.getElementById("stabBarFill");
   overlay.classList.remove("hidden");
@@ -995,17 +1049,23 @@ function applyStyles() {
   const hasSel    = selectedCats.size > 0;
   const isKW      = searchMode === "keyword" || !embedReady;
 
+  // Direct match: actionable whose impact field matches the query.
+  // Category nodes have empty search_blob so their score is always 0 here;
+  // they become visible only via adjacency expansion below.
   let searchMatchNodes = null;
   if (hasSearch) {
     searchMatchNodes = new Set();
     for (const [id, score] of simScores)
       if (isKW ? score > 0 : score >= threshold) searchMatchNodes.add(id);
+    // Expand: also show categories connected to matching actionables
     const expanded = new Set(searchMatchNodes);
     for (const id of searchMatchNodes) {
       const m = nodeMap.get(id);
       if (!m) continue;
-      if (m.node_type === "category")   { for (const a of (catToActions.get(id)||[])) expanded.add(a); }
-      else                              { for (const c of (actionToCats.get(id)||[])) expanded.add(c); }
+      if (m.node_type === "category")
+        { for (const a of (catToActions.get(id)||[])) expanded.add(a); }
+      else
+        { for (const c of (actionToCats.get(id)||[])) expanded.add(c); }
     }
     searchMatchNodes = expanded;
   }
@@ -1013,7 +1073,8 @@ function applyStyles() {
   let selMatchNodes = null;
   if (hasSel) {
     selMatchNodes = new Set(selectedCats);
-    for (const c of selectedCats) { for (const a of (catToActions.get(c)||[])) selMatchNodes.add(a); }
+    for (const c of selectedCats)
+      { for (const a of (catToActions.get(c)||[])) selMatchNodes.add(a); }
   }
 
   function isVisible(id) {
@@ -1062,10 +1123,10 @@ function renderCategoryPanel() {
   const term = committedSearch;
   const isKW = searchMode === "keyword" || !embedReady;
 
+  // A category is visible if any of its actionables has a matching impact score.
+  // Categories themselves have empty search_blob so we never match them directly.
   const visible = categoryIds.filter(id => {
     if (!term) return true;
-    const s = simScores.get(id)||0;
-    if (isKW?s>0:s>=threshold) return true;
     for (const a of (catToActions.get(id)||[])) {
       const as = simScores.get(a)||0;
       if (isKW?as>0:as>=threshold) return true;
@@ -1073,23 +1134,35 @@ function renderCategoryPanel() {
     return false;
   });
 
-  document.getElementById("catCountBadge").textContent = visible.length;
-  document.getElementById("statCats").textContent    = categoryIds.length;
-  document.getElementById("statActions").textContent = actionableIds.length;
-  document.getElementById("statSelected").textContent = selectedCats.size;
+  document.getElementById("catCountBadge").textContent  = visible.length;
+  document.getElementById("statCats").textContent       = categoryIds.length;
+  document.getElementById("statActions").textContent    = actionableIds.length;
+  document.getElementById("statSelected").textContent   = selectedCats.size;
 
-  if (!visible.length) { el.innerHTML='<div class="empty-note">No categories match.</div>'; return; }
+  if (!visible.length) {
+    el.innerHTML = '<div class="empty-note">No categories match.</div>'; return;
+  }
+
+  // Sort by best actionable score within each category
+  const catBestScore = id => {
+    let best = 0;
+    for (const a of (catToActions.get(id)||[])) {
+      const s = simScores.get(a)||0;
+      if (s > best) best = s;
+    }
+    return best;
+  };
 
   const sorted = term
-    ? [...visible].sort((a,b)=>(simScores.get(b)||0)-(simScores.get(a)||0))
+    ? [...visible].sort((a,b) => catBestScore(b) - catBestScore(a))
     : visible;
 
   el.innerHTML = sorted.map(id => {
-    const m = nodeMap.get(id);
-    const s = simScores.get(id)||0;
+    const m       = nodeMap.get(id);
+    const s       = catBestScore(id);
     const scoreStr = (term && !isKW && s>0) ? (s*100).toFixed(0)+"%" : "";
-    const isSel = selectedCats.has(id);
-    const isDir = term && (isKW?s>=1:s>=threshold);
+    const isSel   = selectedCats.has(id);
+    const isDir   = term && (isKW ? s>0 : s>=threshold);
     return `<button class="group-item${isSel?" selected":""}${isDir?" matched":""}"
               onclick="toggleCat('${id}')">
       <span>${esc(m?.category||id)}</span>
@@ -1106,8 +1179,14 @@ function toggleCat(id) {
 function selectVisible() {
   const term=committedSearch, isKW=searchMode==="keyword"||!embedReady;
   for (const id of categoryIds) {
-    const s=simScores.get(id)||0;
-    if (!term||(isKW?s>0:s>=threshold)) selectedCats.add(id);
+    let show = !term;
+    if (!show) {
+      for (const a of (catToActions.get(id)||[])) {
+        const as = simScores.get(a)||0;
+        if (isKW?as>0:as>=threshold) { show=true; break; }
+      }
+    }
+    if (show) selectedCats.add(id);
   }
   document.getElementById("statSelected").textContent = selectedCats.size;
   applyStyles(); renderCategoryPanel();
@@ -1120,7 +1199,6 @@ function clearSelection() {
 
 // ── detail panel ───────────────────────────────────────────────────────────────
 function qBadge(label, val) {
-  // For SOUND / PRECISE / CONFIDENCE — show as coloured badge when Yes/No/numeric
   const v = (val||"").trim();
   const isYes = /^(yes|true|1|high|strong)$/i.test(v);
   const isNo  = /^(no|false|0|low|weak)$/i.test(v);
@@ -1141,19 +1219,21 @@ function showDetail(m) {
 function buildDetailHTML(m, score) {
   const simBar = (score != null && committedSearch && searchMode==="semantic" && embedReady)
     ? `<div class="sim-bar-wrap">
-         <div class="sim-bar-label">Semantic similarity</div>
+         <div class="sim-bar-label">Semantic similarity (Impact field)</div>
          <div class="sim-bar-track"><div class="sim-bar-fill" style="width:${(score*100).toFixed(1)}%"></div></div>
          <div style="font-size:10px;color:var(--accent);margin-top:3px;font-family:'IBM Plex Mono',monospace">${(score*100).toFixed(1)}%</div>
        </div>` : "";
 
   if (m.node_type === "actionable") {
+    const catChips = (m.categories||[])
+      .map(c => `<span class="cat-chip">${esc(c)}</span>`).join("");
     return `
       <div class="detail-title">${esc(m.short_label||m.id)} <span class="tag tag-a">actionable</span></div>
       <div class="dlabel">Actionable</div>
       <div class="dval">${esc(m.actionable)}</div>
       <div class="dlabel">Impact</div>
       <div class="dval">${esc(m.impact||"N/A")}</div>
-      <div class="dlabel">Empirical Evidence</div>
+      <div class="dlabel">Evidence</div>
       <div class="dval">${esc(m.empirical_evidence||"N/A")}</div>
       <div class="dlabel">Quality indicators</div>
       <div class="badge-row">
@@ -1161,15 +1241,14 @@ function buildDetailHTML(m, score) {
         ${qBadge("Sound",      m.sound)}
         ${qBadge("Precise",    m.precise)}
       </div>
-      <div class="dlabel">Category</div>
-      <div class="dval">${esc(m.category||"N/A")}</div>
+      <div class="dlabel">Categories (${(m.categories||[]).length})</div>
+      <div class="cat-chips">${catChips || "N/A"}</div>
       <div class="dlabel">Article</div>
       <div class="dval">${esc(m.article_title||"N/A")}</div>
-      ${m.count ? `<div class="dlabel">Count</div><div class="dval">${esc(m.count)}</div>` : ""}
+      ${m.count ? `<div class="dlabel">Support</div><div class="dval">${esc(m.count)}</div>` : ""}
       ${simBar}`;
   }
 
-  // category node
   const connected = [...(catToActions.get(String(m.id))||[])];
   return `
     <div class="detail-title">${esc(m.category)} <span class="tag tag-c">category</span></div>
@@ -1227,7 +1306,9 @@ function showAll() {
 
 // ── summary ────────────────────────────────────────────────────────────────────
 function updateSummary() {
-  const vEdges = edgesDS ? edgesDS.get().filter(e=>(e.color?.opacity||1)>0.2).length : ALL_EDGES.length;
+  const vEdges = edgesDS
+    ? edgesDS.get().filter(e=>(e.color?.opacity||1)>0.2).length
+    : ALL_EDGES.length;
   document.getElementById("netSummary").textContent =
     `${categoryIds.length} categories · ${actionableIds.length} actionables · ${vEdges} edges visible`;
   document.getElementById("statEdges").textContent = vEdges;
@@ -1238,8 +1319,7 @@ function esc(v) {
          .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
-// ── boot ───────────────────────────────────────────────────────────────────────
-// -- theme ------------------------------------------------------------------
+// ── theme ──────────────────────────────────────────────────────────────────────
 function applyTheme(dark) {
   document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
   var icon = document.getElementById("themeIcon");
@@ -1252,10 +1332,10 @@ function toggleTheme() {
   try { localStorage.setItem("react_network_theme", next ? "dark" : "light"); } catch(e){}
 }
 
+// ── boot ───────────────────────────────────────────────────────────────────────
 (function boot() {
-  // Apply saved or OS theme preference before first paint
   try {
-    var saved = localStorage.getItem("react_network_theme");
+    var saved      = localStorage.getItem("react_network_theme");
     var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     applyTheme(saved ? saved === "dark" : prefersDark);
   } catch(e) { applyTheme(false); }
@@ -1291,10 +1371,10 @@ def generate_html(
     if node_ids and embeddings_b64 and len(node_ids) == len(embeddings_b64):
         baked = {nid: b64 for nid, b64 in zip(node_ids, embeddings_b64)}
         baked_json = json.dumps(baked, ensure_ascii=False)
-        tqdm.write(f"  Baking {len(baked)} node embeddings into HTML.")
+        tqdm.write(f"  ✓  Baking {len(baked)} node embeddings into HTML.")
     else:
         baked_json = "null"
-        tqdm.write("  No embeddings baked — browser will use keyword search.")
+        tqdm.write("  ✗  No embeddings baked — HTML will use keyword search only.")
     return (
         HTML_TEMPLATE
         .replace("__NODES_JSON__",       json.dumps(nodes,     ensure_ascii=False))
@@ -1321,14 +1401,23 @@ def main() -> None:
     parser.add_argument("--input_csv",   type=Path, default=DEFAULT_INPUT_CSV)
     parser.add_argument("--output_html", type=Path, default=DEFAULT_OUTPUT_HTML)
     parser.add_argument("--skip-embed",  action="store_true",
-                        help="Skip embedding — keyword search only")
+                        help="Skip embedding — keyword search only in browser")
     parser.add_argument("--workers",     type=int, default=1,
                         help="Parallel embedding workers (default 1)")
     args = parser.parse_args()
 
+    if not args.skip_embed:
+        if not (HAS_ST and HAS_NP):
+            ok = ensure_embedding_deps()
+            if not ok:
+                print("\n  Falling back to keyword-only mode (--skip-embed behaviour).")
+                args.skip_embed = True
+        else:
+            print("  ✓  sentence-transformers and numpy found.")
+
     print(f"\n[1/5] Reading {args.input_csv}")
     rows = read_csv_rows(args.input_csv)
-    print(f"      {len(rows)} row(s) loaded")
+    print(f"      {len(rows)} usable row(s) loaded")
 
     print("\n[2/5] Building graph payload …")
     nodes, node_meta, edges, stats, node_ids, node_texts = build_graph_payload(rows)
@@ -1340,6 +1429,8 @@ def main() -> None:
     if not args.skip_embed:
         print(f"\n[3/5] Embedding {len(node_texts)} node texts (workers={args.workers}) …")
         embeddings_b64 = embed_texts(node_texts, n_workers=args.workers)
+        if embeddings_b64 is None:
+            print("  ✗  Embedding returned None — HTML will be keyword-only.")
     else:
         print("\n[3/5] Skipping embedding (--skip-embed).")
 
@@ -1354,10 +1445,12 @@ def main() -> None:
     kb = len(html_text.encode()) // 1024
     print(f"\n  Done!  {kb} KB → {args.output_html}")
     if embeddings_b64:
-        print("  Semantic search: baked embeddings + Transformers.js query model")
+        print("  🧠  Semantic search: baked embeddings + Transformers.js query model")
     else:
-        print("  Semantic search: disabled. Run without --skip-embed to enable.")
-    print("  Open the HTML directly in any browser — no server needed.")
+        print("  🔤  Semantic search: DISABLED (keyword only).")
+        print("      To enable: pip install sentence-transformers numpy")
+        print("      Then re-run without --skip-embed")
+    print("  Open the HTML directly in any browser — no server needed.\n")
 
 
 if __name__ == "__main__":

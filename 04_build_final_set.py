@@ -31,7 +31,7 @@ import pandas as pd
 # Default paths
 # ─────────────────────────────────────────────────────────────────────────────
 
-BASE_DIR          = "/data/Deep_Angiography/ReACT-GPT/local_history"
+BASE_DIR          = "/Users/nafiz43/Documents/GitHub/ReACT-GPT/local_history"
 DEFAULT_SCORED      = f"{BASE_DIR}/scored.csv"
 DEFAULT_CATEGORIZED = f"{BASE_DIR}/categorized.csv"
 DEFAULT_OUTPUT      = f"{BASE_DIR}/final_set.csv"
