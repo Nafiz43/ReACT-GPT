@@ -351,9 +351,9 @@ def eda_scored(df, out):
 
         fig, ax = plt.subplots(figsize=(7,7), subplot_kw=dict(polar=True), facecolor=BG)
         ax.set_facecolor(BG)
-        ax.set_rgrids([0.25,0.5,0.75,1.0], labels=["25%","50%","75%","100%"],
+        ax.set_rgrids([0.15,0.30,0.45,0.60], labels=["15%","30%","45%", "50%"],
                       angle=0, fontsize=8, color="#888")
-        ax.set_ylim(0,1)
+        ax.set_ylim(0,0.6)
         ax.grid(color=GRID_CLR, linewidth=0.8, linestyle="--")
         ax.spines["polar"].set_color(GRID_CLR)
         ax.plot(angles, sv, linewidth=2.2, color=GREEN_P[2], label="Sound")
@@ -542,11 +542,11 @@ def eda_categorized(df, out):
     fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True), facecolor=BG)
     ax.set_facecolor(BG)
     ax.set_rgrids(
-        [0.2, 0.4, 0.6, 0.8, 1.0],
-        labels=["20%", "40%", "60%", "80%", "100%"],
+        [0.15, 0.30, 0.45, 0.60],
+        labels=["15%", "30%", "45%", "50%"],
         angle=0, fontsize=8, color="#888",
     )
-    ax.set_ylim(0, 1)
+    ax.set_ylim(0, 0.6)
     ax.grid(color=GRID_CLR, linewidth=0.8, linestyle="--")
     ax.spines["polar"].set_color(GRID_CLR)
 
@@ -558,7 +558,7 @@ def eda_categorized(df, out):
 
     # ── annotate each vertex with its percentage ────────────────────────
     for angle, rate in zip(angles[:-1], verdict_rates):
-        offset = 0.10                        # push label just outside the ring
+        offset = 0.05                        # push label just outside the ring
         ax.text(
             angle, rate + offset,
             f"{rate:.0%}",

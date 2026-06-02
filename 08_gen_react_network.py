@@ -23,6 +23,7 @@ Architecture:
   • Physics         — Barnes-Hut, runs once then freezes
   • Search          — Enter / button only, semantic + keyword modes
   • NOTE: search matches ONLY against the "impact" field of actionable nodes
+  • Filters         — SOUND and PRECISE quality filters in side panel
 
 Usage
 ─────
@@ -78,7 +79,7 @@ except ImportError:
 # ── defaults ───────────────────────────────────────────────────────────────────
 
 DEFAULT_INPUT_CSV   = Path("local_history/final_set.csv")
-DEFAULT_OUTPUT_HTML = Path("results/react_llm_category_network.html")
+DEFAULT_OUTPUT_HTML = Path("results/index.html")
 
 # Canonical categories — only these 8 are kept; anything else is discarded
 CANONICAL_CATEGORIES = {
@@ -267,10 +268,6 @@ def build_graph_payload(
             meta = actionable_to_meta[act]
 
             # ── SEARCH TARGET: only the "impact" field ─────────────────────────
-            # semantic_text drives the baked embedding (cosine similarity search).
-            # search_blob drives keyword matching in the browser.
-            # Both are restricted to the impact field so search only surfaces
-            # nodes whose impact description matches the query.
             semantic_text = meta["impact"] or ""
             search_blob   = (meta["impact"] or "").lower()
             # ──────────────────────────────────────────────────────────────────
@@ -310,8 +307,6 @@ def build_graph_payload(
     with tqdm(category_to_id.items(), desc="  Serialising categories",
               unit="node", total=len(category_to_id)) as bar:
         for cat, visid in bar:
-            # Categories carry no impact text; they surface only when a connected
-            # actionable's impact matches the query (handled in JS adjacency logic).
             semantic_text = ""
             search_blob   = ""
             all_ids_ordered.append(visid)
@@ -401,7 +396,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>ReACT-LLM Category Network Explorer</title>
+  <title>ReACTive · Intelligent Actionable Search Tool</title>
 
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
@@ -505,7 +500,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .legend-item{display:flex;align-items:center;gap:5px}
     .leg-dot{width:9px;height:9px;border-radius:50%}
     /* side panel */
-    .side{flex:0 0 340px;width:340px;height:100vh;overflow-y:auto;
+    .side{flex:0 0 420px;width:420px;height:100vh;overflow-y:auto;
           background:var(--surface);border-left:1px solid var(--border);
           display:flex;flex-direction:column}
     .side-section{padding:13px 15px;border-bottom:1px solid var(--border)}
@@ -564,6 +559,30 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .syntax-hint code{font-family:'IBM Plex Mono',monospace;font-size:10px;
                       background:var(--border);border-radius:3px;padding:1px 4px;color:var(--text)}
     .hint-row{display:flex;justify-content:space-between;gap:6px}
+    /* quality filters */
+    .filter-group{margin-bottom:10px}
+    .filter-group:last-child{margin-bottom:0}
+    .filter-label{font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+    .filter-pills{display:flex;gap:5px}
+    .filter-pill{flex:1;padding:6px 4px;border-radius:8px;font-size:11px;font-weight:700;
+                 border:1px solid var(--border);background:var(--surface2);color:var(--muted);
+                 cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s;
+                 text-align:center}
+    .filter-pill:hover{border-color:var(--accent);color:var(--text)}
+    .filter-pill.fp-any{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .filter-pill.fp-yes{background:#16a34a;color:#fff;border-color:#16a34a}
+    .filter-pill.fp-no {background:#dc2626;color:#fff;border-color:#dc2626}
+    /* explore hint */
+    .explore-hint{font-size:11.5px;color:var(--text);line-height:1.6;
+                  padding:10px 12px 10px 14px;
+                  background:linear-gradient(135deg,rgba(37,99,235,.08) 0%,rgba(37,99,235,.03) 100%);
+                  border-radius:9px;border-left:4px solid var(--accent);
+                  margin-bottom:12px;box-shadow:0 1px 4px rgba(37,99,235,.08)}
+    .explore-hint strong{color:var(--accent);font-weight:700}
+    [data-theme="dark"] .explore-hint{
+      background:linear-gradient(135deg,rgba(88,166,255,.12) 0%,rgba(88,166,255,.04) 100%);
+      box-shadow:0 1px 4px rgba(88,166,255,.1)}
     /* buttons */
     .btn-row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
     .btn{padding:7px 12px;border-radius:8px;font-size:11px;font-weight:700;
@@ -645,6 +664,36 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     [data-theme="dark"] .tag-a{background:rgba(249,115,22,.2);color:#fb923c}
     [data-theme="dark"] .tag-c{background:rgba(91,155,213,.2);color:#93c5fd}
     [data-theme="dark"] .cat-chip{background:rgba(91,155,213,.2);color:#93c5fd;border-color:rgba(91,155,213,.4)}
+    [data-theme="dark"] .filter-pill.fp-yes{background:#166534;color:#4ade80;border-color:#16a34a}
+    [data-theme="dark"] .filter-pill.fp-no {background:#7f1d1d;color:#f87171;border-color:#dc2626}
+    /* ── right-panel text scale ─────────────────────────────────────────── */
+    .side .section-head{font-size:12px}
+    .side .badge{font-size:12px}
+    .side .search-input{font-size:13px}
+    .side .search-btn{font-size:13px}
+    .side .search-mode-banner{font-size:12px}
+    .side .threshold-row{font-size:12px}
+    .side .threshold-val{font-size:12px}
+    .side .mode-pill{font-size:13px}
+    .side .syntax-hint{font-size:12px}
+    .side .syntax-hint code{font-size:12px}
+    .side .filter-label{font-size:12px}
+    .side .filter-pill{font-size:13px}
+    .side .explore-hint{font-size:13px}
+    .side .stat-label{font-size:12px}
+    .side .stat-val{font-size:24px}
+    .side .group-item{font-size:13px}
+    .side .sim-score{font-size:12px}
+    .side .empty-note{font-size:12px}
+    .side .detail-card{font-size:13px}
+    .side .detail-title{font-size:15px}
+    .side .dlabel{font-size:11px}
+    .side .dval{font-size:13px}
+    .side .tag{font-size:12px}
+    .side .cat-chip{font-size:12px}
+    .side .qbadge{font-size:12px}
+    .side .sim-bar-label{font-size:11px}
+    .side .btn{font-size:13px}
     @media(max-width:960px){
       .app{flex-direction:column;height:auto}
       .main,.net-wrap{min-height:520px}
@@ -657,8 +706,8 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <main class="main">
     <div class="topbar">
       <div class="topbar-brand">
-        <div class="eyebrow">ReACT-LLM &middot; Actionable Intelligence</div>
-        <h1>Category &ndash; Actionable Network Explorer</h1>
+        <div class="eyebrow">ReACTive</div>
+        <h1>Intelligent Actionable Search Tool</h1>
       </div>
       <div class="stat-chips">
         <div class="stat-chip"><b id="scRows">0</b> rows</div>
@@ -699,6 +748,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </main>
 
   <aside class="side">
+    <!-- ── Search ─────────────────────────────────────────────────────── -->
     <div class="side-section">
       <div class="section-head">Search <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;color:var(--accent)">&nbsp;(matches Impact field)</span></div>
       <div class="search-row">
@@ -736,7 +786,39 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- ── Quality Filters ───────────────────────────────────────────── -->
     <div class="side-section">
+      <div class="section-head">
+        Quality Filters
+        <span class="badge" id="filterActiveBadge" style="display:none">0 active</span>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">&#128264; Sound</div>
+        <div class="filter-pills">
+          <button class="filter-pill fp-any" id="soundAny" onclick="setSoundFilter('any')">Any</button>
+          <button class="filter-pill"        id="soundYes" onclick="setSoundFilter('yes')">&#10003; Yes</button>
+          <button class="filter-pill"        id="soundNo"  onclick="setSoundFilter('no')">&#10007; No</button>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">&#127919; Precise</div>
+        <div class="filter-pills">
+          <button class="filter-pill fp-any" id="preciseAny" onclick="setPreciseFilter('any')">Any</button>
+          <button class="filter-pill"        id="preciseYes" onclick="setPreciseFilter('yes')">&#10003; Yes</button>
+          <button class="filter-pill"        id="preciseNo"  onclick="setPreciseFilter('no')">&#10007; No</button>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="resetQualityFilters()">Reset filters</button>
+      </div>
+    </div>
+
+    <!-- ── Stats ─────────────────────────────────────────────────────── -->
+    <div class="side-section">
+      <p class="explore-hint"><strong>Browse by category</strong> to focus the graph &mdash; click any actionable node to inspect its insight, evidence, and quality indicators.</p>
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-label">Categories</div>
@@ -757,6 +839,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- ── Categories ────────────────────────────────────────────────── -->
     <div class="side-section">
       <div class="section-head">
         <span>Categories</span>
@@ -769,6 +852,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- ── Details ───────────────────────────────────────────────────── -->
     <div class="side-section">
       <div class="section-head">Details</div>
       <div id="detailPanel" class="detail-card">Click any node to inspect details.</div>
@@ -822,6 +906,67 @@ let embedder        = null;
 let nodeEmbeddings  = null;
 let embedReady      = false;
 let simScores       = new Map();
+
+// quality filter state
+let soundFilter     = "any";
+let preciseFilter   = "any";
+
+// ── quality filter helpers ─────────────────────────────────────────────────────
+function isYesVal(v) { return /^(yes|true|1|high|strong)$/i.test((v||"").trim()); }
+function isNoVal(v)  { return /^(no|false|0|low|weak)$/i.test((v||"").trim()); }
+
+/**
+ * Returns true if the node passes the current SOUND + PRECISE filters.
+ * Category nodes always pass (they are filtered indirectly via their actionables).
+ */
+function passesQualityFilter(m) {
+  if (!m || m.node_type === "category") return true;
+  if (soundFilter !== "any") {
+    if (soundFilter === "yes" && !isYesVal(m.sound))  return false;
+    if (soundFilter === "no"  && !isNoVal(m.sound))   return false;
+  }
+  if (preciseFilter !== "any") {
+    if (preciseFilter === "yes" && !isYesVal(m.precise)) return false;
+    if (preciseFilter === "no"  && !isNoVal(m.precise))  return false;
+  }
+  return true;
+}
+
+function updateFilterBadge() {
+  const n = (soundFilter !== "any" ? 1 : 0) + (preciseFilter !== "any" ? 1 : 0);
+  const badge = document.getElementById("filterActiveBadge");
+  badge.textContent = n + " active";
+  badge.style.display = n > 0 ? "" : "none";
+}
+
+function setSoundFilter(val) {
+  soundFilter = val;
+  for (const v of ["any","yes","no"]) {
+    const btn = document.getElementById("sound" + v.charAt(0).toUpperCase() + v.slice(1));
+    if (btn) btn.className = "filter-pill" + (v === val ? " fp-" + val : "");
+  }
+  updateFilterBadge(); applyStyles(); renderCategoryPanel();
+}
+
+function setPreciseFilter(val) {
+  preciseFilter = val;
+  for (const v of ["any","yes","no"]) {
+    const btn = document.getElementById("precise" + v.charAt(0).toUpperCase() + v.slice(1));
+    if (btn) btn.className = "filter-pill" + (v === val ? " fp-" + val : "");
+  }
+  updateFilterBadge(); applyStyles(); renderCategoryPanel();
+}
+
+function resetQualityFilters() {
+  soundFilter = "any"; preciseFilter = "any";
+  ["sound","precise"].forEach(k => {
+    for (const v of ["any","yes","no"]) {
+      const btn = document.getElementById(k + v.charAt(0).toUpperCase() + v.slice(1));
+      if (btn) btn.className = "filter-pill" + (v === "any" ? " fp-any" : "");
+    }
+  });
+  updateFilterBadge(); applyStyles(); renderCategoryPanel();
+}
 
 // ── AI pill ────────────────────────────────────────────────────────────────────
 function setAIPill(state, text, pct) {
@@ -963,10 +1108,6 @@ function scoreKeyword(blob, parsed) {
   return best;
 }
 
-// NOTE: search_blob for actionable nodes contains ONLY the impact field text.
-// Category nodes have an empty search_blob — they surface only when a connected
-// actionable's impact text matches the query (handled by the adjacency expansion
-// in applyStyles / renderCategoryPanel below).
 function buildKeywordScores(term) {
   const parsed = parseQuery(term); simScores = new Map();
   for (const [id, m] of nodeMap)
@@ -1034,59 +1175,100 @@ function initNetwork() {
   network.on("click", params => {
     if (params.nodes && params.nodes.length) {
       const node = nodeMap.get(String(params.nodes[0]));
-      if (node) showDetail(node);
+      if (node) {
+        showDetail(node);
+        // After the detail panel is populated, scroll it into view inside the side panel
+        requestAnimationFrame(() => {
+          const panel = document.getElementById("detailPanel");
+          if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      }
     } else {
       resetDetail();
     }
   });
 }
 
-// ── style-only update ──────────────────────────────────────────────────────────
-function applyStyles() {
-  if (!nodesDS || !edgesDS) return;
+// ── core visibility logic ──────────────────────────────────────────────────────
+/**
+ * Compute visibility helpers for the current state of all filters.
+ * Returns { isActionableVisible, isCategoryVisible, isVisible, isDirect }.
+ * Called from both applyStyles() and renderCategoryPanel() to keep logic DRY.
+ */
+function buildVisibility() {
   const term      = committedSearch;
   const hasSearch = term.length > 0;
   const hasSel    = selectedCats.size > 0;
   const isKW      = searchMode === "keyword" || !embedReady;
 
-  // Direct match: actionable whose impact field matches the query.
-  // Category nodes have empty search_blob so their score is always 0 here;
-  // they become visible only via adjacency expansion below.
-  let searchMatchNodes = null;
+  // Actionables that pass the search filter (quality filter applied below)
+  let searchMatchSet = null;   // Set of actionable IDs
   if (hasSearch) {
-    searchMatchNodes = new Set();
-    for (const [id, score] of simScores)
-      if (isKW ? score > 0 : score >= threshold) searchMatchNodes.add(id);
-    // Expand: also show categories connected to matching actionables
-    const expanded = new Set(searchMatchNodes);
-    for (const id of searchMatchNodes) {
+    searchMatchSet = new Set();
+    for (const id of actionableIds) {
       const m = nodeMap.get(id);
-      if (!m) continue;
-      if (m.node_type === "category")
-        { for (const a of (catToActions.get(id)||[])) expanded.add(a); }
-      else
-        { for (const c of (actionToCats.get(id)||[])) expanded.add(c); }
+      if (!passesQualityFilter(m)) continue;
+      const s = simScores.get(id) || 0;
+      if (isKW ? s > 0 : s >= threshold) searchMatchSet.add(id);
     }
-    searchMatchNodes = expanded;
   }
 
-  let selMatchNodes = null;
+  // Actionables that belong to a selected category (quality filter applied)
+  let selMatchSet = null;      // Set of actionable IDs
   if (hasSel) {
-    selMatchNodes = new Set(selectedCats);
-    for (const c of selectedCats)
-      { for (const a of (catToActions.get(c)||[])) selMatchNodes.add(a); }
+    selMatchSet = new Set();
+    for (const c of selectedCats) {
+      for (const a of (catToActions.get(c)||[])) {
+        if (passesQualityFilter(nodeMap.get(a))) selMatchSet.add(a);
+      }
+    }
+  }
+
+  function isActionableVisible(id) {
+    if (!passesQualityFilter(nodeMap.get(id))) return false;
+    if (searchMatchSet !== null && !searchMatchSet.has(id))  return false;
+    if (selMatchSet    !== null && !selMatchSet.has(id))     return false;
+    return true;
+  }
+
+  // A category is visible when at least one of its actionables is visible
+  function isCategoryVisible(id) {
+    return [...(catToActions.get(id)||[])].some(a => isActionableVisible(a));
   }
 
   function isVisible(id) {
-    if (!hasSearch && !hasSel) return true;
-    return (!searchMatchNodes || searchMatchNodes.has(id)) &&
-           (!selMatchNodes    || selMatchNodes.has(id));
+    const m = nodeMap.get(id);
+    if (!m) return false;
+    return m.node_type === "actionable"
+      ? isActionableVisible(id)
+      : isCategoryVisible(id);
   }
+
+  // An actionable is a "direct" match when search is active and it's in the match set
   function isDirect(id) {
-    if (!hasSearch) return false;
-    const s = simScores.get(id) || 0;
-    return isKW ? s > 0 : s >= threshold;
+    if (!hasSearch || searchMatchSet === null) return false;
+    return searchMatchSet.has(id);
   }
+
+  // Best search score among quality-passing actionables in a category
+  function catBestScore(catId) {
+    let best = 0;
+    for (const a of (catToActions.get(catId)||[])) {
+      if (!passesQualityFilter(nodeMap.get(a))) continue;
+      const s = simScores.get(a) || 0;
+      if (s > best) best = s;
+    }
+    return best;
+  }
+
+  return { isActionableVisible, isCategoryVisible, isVisible, isDirect, catBestScore, isKW };
+}
+
+// ── style-only update ──────────────────────────────────────────────────────────
+function applyStyles() {
+  if (!nodesDS || !edgesDS) return;
+  const hasSearch = committedSearch.length > 0;
+  const { isVisible, isDirect } = buildVisibility();
 
   nodesDS.update(ALL_NODES.map(n => {
     const id   = String(n.id);
@@ -1121,37 +1303,28 @@ function applyStyles() {
 function renderCategoryPanel() {
   const el   = document.getElementById("groupList");
   const term = committedSearch;
-  const isKW = searchMode === "keyword" || !embedReady;
+  const { isActionableVisible, isCategoryVisible, catBestScore, isKW } = buildVisibility();
 
-  // A category is visible if any of its actionables has a matching impact score.
-  // Categories themselves have empty search_blob so we never match them directly.
-  const visible = categoryIds.filter(id => {
-    if (!term) return true;
-    for (const a of (catToActions.get(id)||[])) {
-      const as = simScores.get(a)||0;
-      if (isKW?as>0:as>=threshold) return true;
-    }
-    return false;
-  });
+  const visible = categoryIds.filter(id => isCategoryVisible(id));
 
-  document.getElementById("catCountBadge").textContent  = visible.length;
-  document.getElementById("statCats").textContent       = categoryIds.length;
-  document.getElementById("statActions").textContent    = actionableIds.length;
-  document.getElementById("statSelected").textContent   = selectedCats.size;
+  // Count visible actionables for stats
+  const visibleActionCount = actionableIds.filter(id => isActionableVisible(id)).length;
+
+  document.getElementById("catCountBadge").textContent = visible.length;
+  // Show filtered/total when a filter reduces the count
+  document.getElementById("statCats").textContent =
+    visible.length < categoryIds.length
+      ? visible.length + "/" + categoryIds.length
+      : categoryIds.length;
+  document.getElementById("statActions").textContent =
+    visibleActionCount < actionableIds.length
+      ? visibleActionCount + "/" + actionableIds.length
+      : actionableIds.length;
+  document.getElementById("statSelected").textContent = selectedCats.size;
 
   if (!visible.length) {
-    el.innerHTML = '<div class="empty-note">No categories match.</div>'; return;
+    el.innerHTML = '<div class="empty-note">No categories match current filters.</div>'; return;
   }
-
-  // Sort by best actionable score within each category
-  const catBestScore = id => {
-    let best = 0;
-    for (const a of (catToActions.get(id)||[])) {
-      const s = simScores.get(a)||0;
-      if (s > best) best = s;
-    }
-    return best;
-  };
 
   const sorted = term
     ? [...visible].sort((a,b) => catBestScore(b) - catBestScore(a))
@@ -1177,17 +1350,8 @@ function toggleCat(id) {
   applyStyles(); renderCategoryPanel();
 }
 function selectVisible() {
-  const term=committedSearch, isKW=searchMode==="keyword"||!embedReady;
-  for (const id of categoryIds) {
-    let show = !term;
-    if (!show) {
-      for (const a of (catToActions.get(id)||[])) {
-        const as = simScores.get(a)||0;
-        if (isKW?as>0:as>=threshold) { show=true; break; }
-      }
-    }
-    if (show) selectedCats.add(id);
-  }
+  const { isCategoryVisible } = buildVisibility();
+  for (const id of categoryIds) { if (isCategoryVisible(id)) selectedCats.add(id); }
   document.getElementById("statSelected").textContent = selectedCats.size;
   applyStyles(); renderCategoryPanel();
 }
@@ -1297,10 +1461,24 @@ function setSearchMode(mode) {
   if (committedSearch) runSearch();
 }
 function fitView() { if(network) network.fit({animation:{duration:400,easingFunction:"easeInOutQuad"}}); }
+
 function showAll() {
+  // Reset search
   document.getElementById("searchBox").value = "";
   document.getElementById("searchClear").classList.remove("visible");
-  committedSearch = ""; selectedCats.clear(); simScores = new Map();
+  committedSearch = "";
+  selectedCats.clear();
+  simScores = new Map();
+  // Reset quality filters without triggering redundant redraws
+  soundFilter = "any"; preciseFilter = "any";
+  ["sound","precise"].forEach(k => {
+    for (const v of ["any","yes","no"]) {
+      const btn = document.getElementById(k + v.charAt(0).toUpperCase() + v.slice(1));
+      if (btn) btn.className = "filter-pill" + (v === "any" ? " fp-any" : "");
+    }
+  });
+  updateFilterBadge();
+  // Single redraw
   applyStyles(); renderCategoryPanel(); resetDetail(); fitView();
 }
 
@@ -1309,8 +1487,11 @@ function updateSummary() {
   const vEdges = edgesDS
     ? edgesDS.get().filter(e=>(e.color?.opacity||1)>0.2).length
     : ALL_EDGES.length;
+  const { isActionableVisible, isCategoryVisible } = buildVisibility();
+  const vCats    = categoryIds.filter(id => isCategoryVisible(id)).length;
+  const vActions = actionableIds.filter(id => isActionableVisible(id)).length;
   document.getElementById("netSummary").textContent =
-    `${categoryIds.length} categories · ${actionableIds.length} actionables · ${vEdges} edges visible`;
+    `${vCats} categories · ${vActions} actionables · ${vEdges} edges visible`;
   document.getElementById("statEdges").textContent = vEdges;
 }
 
@@ -1344,6 +1525,16 @@ function toggleTheme() {
   document.getElementById("scCats").textContent    = GRAPH_STATS.category_count;
   document.getElementById("scActions").textContent = GRAPH_STATS.actionable_count;
   document.getElementById("scEdges").textContent   = GRAPH_STATS.edge_count;
+
+  // Pre-select the default category so only its actionables are visible on load
+  const DEFAULT_CATEGORY = "New Contributor Onboarding and Involvement";
+  for (const m of ALL_NODE_META) {
+    if (m.node_type === "category" && m.category === DEFAULT_CATEGORY) {
+      selectedCats.add(String(m.id));
+      break;
+    }
+  }
+
   initNetwork();
   renderCategoryPanel();
   bootstrapEmbedder().catch(err => {

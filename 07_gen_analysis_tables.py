@@ -220,7 +220,7 @@ def generate_per_model_table(df: pd.DataFrame) -> str:
         r"\label{table:ReACTPerModel}",
         r"\def\arraystretch{1.2}",
         r"\resizebox{\textwidth}{!}{",
-        r"\begin{tabular}{l|ccccc|c}",
+        r"\begin{tabular}{l|cccccc|c}",
         r"\hline",
         r"\textbf{Model} & \textbf{\# ReACTs} & \textbf{SOUND} & \textbf{PRECISE} & "
         r"\textbf{Impact} & \textbf{Evidence} & \textbf{Complete} & \textbf{Confidence} \\",
