@@ -1,0 +1,201 @@
+item_id,row_id,cluster_id,primary_category,article_title,venue,pdf_path,model_sound_label,model_precise_label,cat_onboarding,cat_code_standards,cat_testing_qa,cat_community,cat_documentation,cat_governance,cat_security,cat_cicd
+H001,3534,8,Code Standards and Maintainability,14,ICSE/ICSE 16/14.pdf,data/paper-set/infer-set/ICSE/ICSE 16/14.pdf,YES,NO,NO,YES,NO,NO,NO,YES,NO,NO
+H002,1295,1,Project Management and Governance,**Enriching Software Engineering Courses with ServiceLearning Projects and the Open-Source Approach**,ICSE/ICSE 05/2.pdf,data/paper-set/infer-set/ICSE/ICSE 05/2.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H003,1610,3,New Contributor Onboarding and Involvement,**The Shifting Sands of Motivation: Revisiting What Drives Contributors in Open Source**,ICSE/ICSE 21/24.pdf,data/paper-set/infer-set/ICSE/ICSE 21/24.pdf,YES,NO,YES,NO,NO,YES,NO,NO,NO,NO
+H004,2112,3,Security Best Practices and Legal Compliance,**Automated Detection of Password Leakage from Public GitHub Repositories**,ICSE/ICSE 22/17.pdf,data/paper-set/infer-set/ICSE/ICSE 22/17.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H005,50,1,Documentation Practices,7,FSE/FSE 13/7.pdf,data/paper-set/infer-set/FSE/FSE 13/7.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H006,826,1,Project Management and Governance,21,ICSE/ICSE 15/21.pdf,data/paper-set/infer-set/ICSE/ICSE 15/21.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H007,329,2,New Contributor Onboarding and Involvement,5,FSE/FSE 20/5.pdf,data/paper-set/infer-set/FSE/FSE 20/5.pdf,YES,YES,YES,YES,NO,NO,NO,YES,NO,NO
+H008,2861,2,CI/CD and DevOps Automation,31,ICSE/ICSE 22/31.pdf,data/paper-set/infer-set/ICSE/ICSE 22/31.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H009,2531,2,Automated Testing and Quality Assurance,23,ICSE/ICSE 13/23.pdf,data/paper-set/infer-set/ICSE/ICSE 13/23.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H010,2147,3,Code Standards and Maintainability,34,ICSE/ICSE 22/34.pdf,data/paper-set/infer-set/ICSE/ICSE 22/34.pdf,YES,NO,NO,YES,YES,NO,NO,NO,NO,NO
+H011,2396,1,Documentation Practices,16,FSE/FSE 19/16.pdf,data/paper-set/infer-set/FSE/FSE 19/16.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H012,640,2,Automated Testing and Quality Assurance,24,FSE/FSE 23/24.pdf,data/paper-set/infer-set/FSE/FSE 23/24.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H013,1548,11,Community Collaboration and Engagement,18,FSE/FSE 23/18.pdf,data/paper-set/infer-set/FSE/FSE 23/18.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H014,1581,2,Community Collaboration and Engagement,Playing Planning Poker in Crowds: Human Computation of Software Effort Estimates,ICSE/ICSE 21/1.pdf,data/paper-set/infer-set/ICSE/ICSE 21/1.pdf,YES,YES,NO,NO,NO,YES,NO,YES,NO,NO
+H015,1519,7,Security Best Practices and Legal Compliance,An Empirical Assessment of Global COVID-19 Contact Tracing Applications,ICSE/ICSE 21/44.pdf,data/paper-set/infer-set/ICSE/ICSE 21/44.pdf,YES,NO,NO,NO,NO,NO,NO,NO,YES,NO
+H016,1349,13,Code Standards and Maintainability,The Software Heritage Filesystem (SwhFS): Integrating Source Code Archival with Development,ICSE/ICSE 21/38.pdf,data/paper-set/infer-set/ICSE/ICSE 21/38.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H017,508,5,Code Standards and Maintainability,"**A Large-Scale Empirical Study on Java Library Migrations: Prevalence, Trends, and Rationales**",FSE/FSE 21/9.pdf,data/paper-set/infer-set/FSE/FSE 21/9.pdf,YES,YES,NO,YES,NO,NO,NO,YES,YES,NO
+H018,46,3,Security Best Practices and Legal Compliance,9,FSE/FSE 19/9.pdf,data/paper-set/infer-set/FSE/FSE 19/9.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H019,1824,4,Project Management and Governance,27,ICSE/ICSE 12/27.pdf,data/paper-set/infer-set/ICSE/ICSE 12/27.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H020,1825,2,Community Collaboration and Engagement,4,ICSE/ICSE 17/4.pdf,data/paper-set/infer-set/ICSE/ICSE 17/4.pdf,YES,NO,NO,NO,NO,YES,NO,YES,NO,NO
+H021,1936,3,New Contributor Onboarding and Involvement,**To Disengage or Not to Disengage: A Look at Contributor Disengagement in Open Source Software**,ICSE/ICSE 22/10.pdf,data/paper-set/infer-set/ICSE/ICSE 22/10.pdf,YES,YES,YES,NO,NO,YES,YES,NO,NO,NO
+H022,1554,19,Community Collaboration and Engagement,18,FSE/FSE 23/18.pdf,data/paper-set/infer-set/FSE/FSE 23/18.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H023,2711,2,CI/CD and DevOps Automation,42,ICSE/ICSE 22/42.pdf,data/paper-set/infer-set/ICSE/ICSE 22/42.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H024,1294,5,Project Management and Governance,**Enriching Software Engineering Courses with ServiceLearning Projects and the Open-Source Approach**,ICSE/ICSE 05/2.pdf,data/paper-set/infer-set/ICSE/ICSE 05/2.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,NO
+H025,3273,4,Documentation Practices,[* enabled *] # (optional) Whether the network service should be enabled. -# Defaults to false + # Defaults to true,ICSE/ICSE 20/27.pdf,data/paper-set/infer-set/ICSE/ICSE 20/27.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H026,545,6,Security Best Practices and Legal Compliance,16,FSE/FSE 22/16.pdf,data/paper-set/infer-set/FSE/FSE 22/16.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H027,3490,3,Project Management and Governance,**The Small Project Observatory - A Tool for Reverse Engineering Software Ecosystems**,ICSE/ICSE 10/1.pdf,data/paper-set/infer-set/ICSE/ICSE 10/1.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,NO
+H028,2988,2,New Contributor Onboarding and Involvement,**Scaling Open Source Communities: An Empirical Study of the Linux Kernel**,ICSE/ICSE 20/33.pdf,data/paper-set/infer-set/ICSE/ICSE 20/33.pdf,YES,YES,YES,NO,NO,YES,NO,YES,NO,NO
+H029,1417,9,Security Best Practices and Legal Compliance,An Empirical Assessment of Global COVID-19 Contact Tracing Applications,ICSE/ICSE 21/43.pdf,data/paper-set/infer-set/ICSE/ICSE 21/43.pdf,YES,NO,NO,NO,NO,NO,NO,NO,YES,NO
+H030,2536,3,Security Best Practices and Legal Compliance,17,ICSE/ICSE 13/17.pdf,data/paper-set/infer-set/ICSE/ICSE 13/17.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H031,2677,1,Automated Testing and Quality Assurance,Automatic Detection of Performance Deviations in the Load Testing of Large Scale Systems,ICSE/ICSE 13/15.pdf,data/paper-set/infer-set/ICSE/ICSE 13/15.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H032,3533,7,Project Management and Governance,14,ICSE/ICSE 16/14.pdf,data/paper-set/infer-set/ICSE/ICSE 16/14.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,YES
+H033,2118,5,Automated Testing and Quality Assurance,15,ICSE/ICSE 12/15.pdf,data/paper-set/infer-set/ICSE/ICSE 12/15.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H034,446,3,CI/CD and DevOps Automation,5,FSE/FSE 17/5.pdf,data/paper-set/infer-set/FSE/FSE 17/5.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H035,2794,3,Community Collaboration and Engagement,**Socio-Technical Developer Networks: Should We Trust Our Measurements?**,ICSE/ICSE 11/6.pdf,data/paper-set/infer-set/ICSE/ICSE 11/6.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H036,2673,3,Security Best Practices and Legal Compliance,6,ICSE/ICSE 09/6.pdf,data/paper-set/infer-set/ICSE/ICSE 09/6.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H037,1,2,Project Management and Governance,33,FSE/FSE 22/33.pdf,data/paper-set/infer-set/FSE/FSE 22/33.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H038,2005,5,Project Management and Governance,16,ICSE/ICSE 12/16.pdf,data/paper-set/infer-set/ICSE/ICSE 12/16.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H039,2044,1,Automated Testing and Quality Assurance,18,ICSE/ICSE 22/18.pdf,data/paper-set/infer-set/ICSE/ICSE 22/18.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H040,2111,1,Security Best Practices and Legal Compliance,**Automated Detection of Password Leakage from Public GitHub Repositories**,ICSE/ICSE 22/17.pdf,data/paper-set/infer-set/ICSE/ICSE 22/17.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H041,3677,4,Code Standards and Maintainability,4,FSE/FSE 21/4.pdf,data/paper-set/infer-set/FSE/FSE 21/4.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,NO
+H042,2439,2,Security Best Practices and Legal Compliance,**Case Studies and Tools for Contract Specifications**,ICSE/ICSE 14/8.pdf,data/paper-set/infer-set/ICSE/ICSE 14/8.pdf,NO,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H043,3807,18,Project Management and Governance,**Lessons Learned Managing Distributed Software Engineering Courses**,ICSE/ICSE 14/20.pdf,data/paper-set/infer-set/ICSE/ICSE 14/20.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H044,894,2,CI/CD and DevOps Automation,VIATRA Solver: A Framework for the Automated Generation of Consistent Domain-Specific Models,ICSE/ICSE 19/2.pdf,data/paper-set/infer-set/ICSE/ICSE 19/2.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H045,3232,1,Community Collaboration and Engagement,5,ICSE/ICSE 07/5.pdf,data/paper-set/infer-set/ICSE/ICSE 07/5.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H046,812,1,Code Standards and Maintainability,6,ICSE/ICSE 19/6.pdf,data/paper-set/infer-set/ICSE/ICSE 19/6.pdf,YES,YES,NO,YES,NO,NO,NO,YES,NO,NO
+H047,2851,1,Code Standards and Maintainability,10,ICSE/ICSE 11/10.pdf,data/paper-set/infer-set/ICSE/ICSE 11/10.pdf,YES,YES,NO,YES,NO,NO,YES,NO,NO,NO
+H048,2450,4,Documentation Practices,**Disseminating Architectural Knowledge on Open-Source Projects**,ICSE/ICSE 16/23.pdf,data/paper-set/infer-set/ICSE/ICSE 16/23.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H049,1852,2,Code Standards and Maintainability,4,ICSE/ICSE 12/4.pdf,data/paper-set/infer-set/ICSE/ICSE 12/4.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H050,1413,4,Security Best Practices and Legal Compliance,An Empirical Assessment of Global COVID-19 Contact Tracing Applications,ICSE/ICSE 21/43.pdf,data/paper-set/infer-set/ICSE/ICSE 21/43.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H051,943,1,Code Standards and Maintainability,**DeepDev-PERF: A Deep Learning-Based Approach for Improving Software Performance**,FSE/FSE 22/19.pdf,data/paper-set/infer-set/FSE/FSE 22/19.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H052,3641,3,Community Collaboration and Engagement,25,FSE/FSE 21/25.pdf,data/paper-set/infer-set/FSE/FSE 21/25.pdf,YES,YES,NO,NO,NO,YES,NO,YES,NO,NO
+H053,68,4,CI/CD and DevOps Automation,17,FSE/FSE 20/17.pdf,data/paper-set/infer-set/FSE/FSE 20/17.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H054,2793,1,Community Collaboration and Engagement,**Socio-Technical Developer Networks: Should We Trust Our Measurements?**,ICSE/ICSE 11/6.pdf,data/paper-set/infer-set/ICSE/ICSE 11/6.pdf,YES,YES,NO,NO,NO,YES,NO,YES,NO,NO
+H055,611,4,Project Management and Governance,5,FSE/FSE 23/5.pdf,data/paper-set/infer-set/FSE/FSE 23/5.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,YES
+H056,3703,5,Security Best Practices and Legal Compliance,i24_37,ICSE/ICSE 24/i24_37.pdf,data/paper-set/infer-set/ICSE/ICSE 24/i24_37.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H057,1970,3,New Contributor Onboarding and Involvement,������������������������������������������������������ ����������������������,ICSE/ICSE 22/3.pdf,data/paper-set/infer-set/ICSE/ICSE 22/3.pdf,YES,NO,YES,NO,NO,YES,NO,NO,NO,NO
+H058,3102,5,Security Best Practices and Legal Compliance,5,ICSE/ICSE 09/5.pdf,data/paper-set/infer-set/ICSE/ICSE 09/5.pdf,YES,NO,NO,NO,NO,NO,NO,NO,YES,NO
+H059,2676,3,Automated Testing and Quality Assurance,Automatic Detection of Performance Deviations in the Load Testing of Large Scale Systems,ICSE/ICSE 13/15.pdf,data/paper-set/infer-set/ICSE/ICSE 13/15.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H060,585,1,Code Standards and Maintainability,14,FSE/FSE 23/14.pdf,data/paper-set/infer-set/FSE/FSE 23/14.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,NO
+H061,3599,2,Security Best Practices and Legal Compliance,7,ICSE/ICSE 10/7.pdf,data/paper-set/infer-set/ICSE/ICSE 10/7.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H062,614,3,Code Standards and Maintainability,24,ICSE/ICSE 15/24.pdf,data/paper-set/infer-set/ICSE/ICSE 15/24.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H063,1575,4,New Contributor Onboarding and Involvement,**Mining Development Repositories To Study the Impact of Collaboration on Software Systems**,FSE/FSE 11/6.pdf,data/paper-set/infer-set/FSE/FSE 11/6.pdf,YES,NO,YES,NO,NO,YES,NO,YES,NO,NO
+H064,2668,4,Project Management and Governance,4,ICSE/ICSE 13/4.pdf,data/paper-set/infer-set/ICSE/ICSE 13/4.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H065,1119,3,Automated Testing and Quality Assurance,**Semi-supervised Pre-processing for Learning-Based Traceability Framework on Real-World Software Projects**,FSE/FSE 22/11.pdf,data/paper-set/infer-set/FSE/FSE 22/11.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H066,325,3,New Contributor Onboarding and Involvement,17,FSE/FSE 16/17.pdf,data/paper-set/infer-set/FSE/FSE 16/17.pdf,YES,YES,YES,NO,NO,YES,NO,NO,NO,NO
+H067,2913,7,New Contributor Onboarding and Involvement,"**Onboarding vs. Diversity, Productivity, and Quality -  Empirical Study of the OpenStack Ecosystem**",ICSE/ICSE 21/23.pdf,data/paper-set/infer-set/ICSE/ICSE 21/23.pdf,YES,NO,YES,NO,NO,NO,NO,NO,NO,NO
+H068,418,2,Community Collaboration and Engagement,**On the Relationship between Design Discussions and Design Quality: A Case Study of Apache Projects**,FSE/FSE 20/9.pdf,data/paper-set/infer-set/FSE/FSE 20/9.pdf,YES,YES,NO,NO,NO,YES,YES,YES,NO,NO
+H069,3186,5,CI/CD and DevOps Automation,1,ICSE/ICSE 18/1.pdf,data/paper-set/infer-set/ICSE/ICSE 18/1.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H070,263,5,Code Standards and Maintainability,5,FSE/FSE 13/5.pdf,data/paper-set/infer-set/FSE/FSE 13/5.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,YES
+H071,326,1,New Contributor Onboarding and Involvement,5,FSE/FSE 20/5.pdf,data/paper-set/infer-set/FSE/FSE 20/5.pdf,YES,YES,YES,NO,NO,NO,YES,YES,NO,NO
+H072,256,3,Automated Testing and Quality Assurance,10,FSE/FSE 17/10.pdf,data/paper-set/infer-set/FSE/FSE 17/10.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H073,3029,4,Community Collaboration and Engagement,**Power Through Brokering: Open Source Community Participation in Software Engineering Student Projects**,ICSE/ICSE 08/8.pdf,data/paper-set/infer-set/ICSE/ICSE 08/8.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H074,434,8,Security Best Practices and Legal Compliance,**Automated Identification of Security Issues from Commit Messages and Bug Reports**,FSE/FSE 17/12.pdf,data/paper-set/infer-set/FSE/FSE 17/12.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H075,2242,1,Community Collaboration and Engagement,**GitHub Sponsors: Exploring a New Way to Contribute to Open Source**,ICSE/ICSE 22/26.pdf,data/paper-set/infer-set/ICSE/ICSE 22/26.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H076,2124,8,Code Standards and Maintainability,The Smelly Eight: An Empirical Study on the Prevalence of Code Smells in Quantum Computing,ICSE/ICSE 23/i23_20.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_20.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H077,2466,4,CI/CD and DevOps Automation,25,ICSE/ICSE 14/25.pdf,data/paper-set/infer-set/ICSE/ICSE 14/25.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H078,2824,7,Documentation Practices,1,ICSE/ICSE 04/1.pdf,data/paper-set/infer-set/ICSE/ICSE 04/1.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H079,1199,5,Automated Testing and Quality Assurance,27,ICSE/ICSE 19/27.pdf,data/paper-set/infer-set/ICSE/ICSE 19/27.pdf,YES,YES,NO,NO,YES,NO,NO,NO,YES,NO
+H080,1010,6,Community Collaboration and Engagement,7,ICSE/ICSE 15/7.pdf,data/paper-set/infer-set/ICSE/ICSE 15/7.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H081,1784,4,Community Collaboration and Engagement,"**TraceLab: An Experimental Workbench for Equipping Researchers to Innovate, Synthesize, and Comparatively Evaluate Traceability Solutions**",ICSE/ICSE 12/24.pdf,data/paper-set/infer-set/ICSE/ICSE 12/24.pdf,YES,YES,NO,NO,NO,YES,NO,YES,NO,NO
+H082,469,6,Automated Testing and Quality Assurance,3,FSE/FSE 16/3.pdf,data/paper-set/infer-set/FSE/FSE 16/3.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H083,3536,11,Project Management and Governance,14,ICSE/ICSE 16/14.pdf,data/paper-set/infer-set/ICSE/ICSE 16/14.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H084,1830,6,Community Collaboration and Engagement,4,ICSE/ICSE 17/4.pdf,data/paper-set/infer-set/ICSE/ICSE 17/4.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H085,1096,3,New Contributor Onboarding and Involvement,Analysis and Detection of Information Types of Open Source Software Issue Discussions,ICSE/ICSE 19/23.pdf,data/paper-set/infer-set/ICSE/ICSE 19/23.pdf,YES,NO,YES,NO,NO,YES,YES,YES,NO,NO
+H086,2710,1,Documentation Practices,42,ICSE/ICSE 22/42.pdf,data/paper-set/infer-set/ICSE/ICSE 22/42.pdf,YES,YES,NO,NO,NO,NO,YES,NO,YES,NO
+H087,3691,11,Project Management and Governance,**Work Practices and Challenges in Pull-Based Development: The Contributor’s Perspective**,ICSE/ICSE 16/20.pdf,data/paper-set/infer-set/ICSE/ICSE 16/20.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,YES
+H088,647,3,Code Standards and Maintainability,15,FSE/FSE 23/15.pdf,data/paper-set/infer-set/FSE/FSE 23/15.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,NO
+H089,1684,2,Automated Testing and Quality Assurance,Evaluating the Impact of Experimental Assumptions in Automated Fault Localization,ICSE/ICSE 23/i23_15.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_15.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H090,1215,1,Project Management and Governance,**Estimating LOC for Information Systems from their Conceptual Data Models**,ICSE/ICSE 06/2.pdf,data/paper-set/infer-set/ICSE/ICSE 06/2.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H091,1737,5,Automated Testing and Quality Assurance,**An Empirical Analysis of Flaky Tests**,FSE/FSE 14/9.pdf,data/paper-set/infer-set/FSE/FSE 14/9.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H092,2110,8,Code Standards and Maintainability,19,ICSE/ICSE 12/19.pdf,data/paper-set/infer-set/ICSE/ICSE 12/19.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H093,1516,6,Security Best Practices and Legal Compliance,An Empirical Assessment of Global COVID-19 Contact Tracing Applications,ICSE/ICSE 21/44.pdf,data/paper-set/infer-set/ICSE/ICSE 21/44.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H094,3725,2,Security Best Practices and Legal Compliance,**Unveiling Memorization in Code Models**,ICSE/ICSE 24/i24_11.pdf,data/paper-set/infer-set/ICSE/ICSE 24/i24_11.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H095,219,4,Community Collaboration and Engagement,8,FSE/FSE 20/8.pdf,data/paper-set/infer-set/FSE/FSE 20/8.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H096,1604,4,CI/CD and DevOps Automation,Addressing Performance Regressions in DevOps: Can We Escape from System Performance Testing?,ICSE/ICSE 23/i23_7.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_7.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H097,2649,10,Project Management and Governance,**What Makes a Great Maintainer of Open Source Projects?**,ICSE/ICSE 21/19.pdf,data/paper-set/infer-set/ICSE/ICSE 21/19.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,NO
+H098,330,5,New Contributor Onboarding and Involvement,5,FSE/FSE 20/5.pdf,data/paper-set/infer-set/FSE/FSE 20/5.pdf,YES,YES,YES,NO,NO,YES,YES,NO,NO,NO
+H099,422,2,Automated Testing and Quality Assurance,9,FSE/FSE 16/9.pdf,data/paper-set/infer-set/FSE/FSE 16/9.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H100,788,4,Documentation Practices,Enabling the Definition and Enforcement of Governance Rules in Open Source Systems,ICSE/ICSE 15/19.pdf,data/paper-set/infer-set/ICSE/ICSE 15/19.pdf,YES,YES,NO,NO,NO,NO,YES,YES,NO,NO
+H101,1535,4,New Contributor Onboarding and Involvement,Skill Recommendation for New Contributors in Open-Source Software,ICSE/ICSE 23/i23_11.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_11.pdf,YES,YES,YES,NO,NO,YES,NO,YES,NO,NO
+H102,1837,1,Project Management and Governance,29,ICSE/ICSE 12/29.pdf,data/paper-set/infer-set/ICSE/ICSE 12/29.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,NO
+H103,1962,2,Automated Testing and Quality Assurance,17,ICSE/ICSE 17/17.pdf,data/paper-set/infer-set/ICSE/ICSE 17/17.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H104,2584,6,Automated Testing and Quality Assurance,18,ICSE/ICSE 14/18.pdf,data/paper-set/infer-set/ICSE/ICSE 14/18.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H105,499,6,Documentation Practices,**OASIS: Prioritizing Static Analysis Warnings for Android Apps Based on App User Reviews**,FSE/FSE 17/7.pdf,data/paper-set/infer-set/FSE/FSE 17/7.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H106,766,8,New Contributor Onboarding and Involvement,**A Theory of the Engagement in Open Source Projects via Summer of Code Programs**,FSE/FSE 20/6.pdf,data/paper-set/infer-set/FSE/FSE 20/6.pdf,YES,NO,YES,NO,NO,YES,NO,NO,NO,NO
+H107,3212,2,Documentation Practices,**Adding Sparkle to Social Coding: An Empirical Study of Repository Badges in the npm Ecosystem**,ICSE/ICSE 18/33.pdf,data/paper-set/infer-set/ICSE/ICSE 18/33.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H108,3415,1,Code Standards and Maintainability,**Large-Scale Analysis of Framework-Specific Exceptions in Android Apps**,ICSE/ICSE 18/44.pdf,data/paper-set/infer-set/ICSE/ICSE 18/44.pdf,YES,YES,NO,YES,NO,NO,NO,NO,YES,NO
+H109,3694,14,Community Collaboration and Engagement,**Work Practices and Challenges in Pull-Based Development: The Contributor’s Perspective**,ICSE/ICSE 16/20.pdf,data/paper-set/infer-set/ICSE/ICSE 16/20.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H110,1071,4,Project Management and Governance,7,ICSE/ICSE 19/7.pdf,data/paper-set/infer-set/ICSE/ICSE 19/7.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H111,3288,1,Automated Testing and Quality Assurance,Modeling the Effect of Size on Defect Proneness for Open-Source Software,ICSE/ICSE 07/4.pdf,data/paper-set/infer-set/ICSE/ICSE 07/4.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H112,2920,3,Community Collaboration and Engagement,**How Do Companies Collaborate in Open Source Ecosystems? An Empirical Study of OpenStack**,ICSE/ICSE 20/31.pdf,data/paper-set/infer-set/ICSE/ICSE 20/31.pdf,YES,NO,NO,NO,NO,YES,NO,YES,NO,NO
+H113,300,1,Automated Testing and Quality Assurance,**Effort-Aware Just-in-Time Defect Prediction: Simple Unsupervised Models Could Be Better Than Supervised Models**,FSE/FSE 16/4.pdf,data/paper-set/infer-set/FSE/FSE 16/4.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H114,3686,4,New Contributor Onboarding and Involvement,**Work Practices and Challenges in Pull-Based Development: The Contributor’s Perspective**,ICSE/ICSE 16/20.pdf,data/paper-set/infer-set/ICSE/ICSE 16/20.pdf,YES,YES,YES,NO,NO,NO,NO,NO,NO,YES
+H115,56,1,CI/CD and DevOps Automation,16,FSE/FSE 20/16.pdf,data/paper-set/infer-set/FSE/FSE 20/16.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H116,1669,2,Code Standards and Maintainability,Are Machine Learning Cloud APIs Used Correctly?,ICSE/ICSE 21/6.pdf,data/paper-set/infer-set/ICSE/ICSE 21/6.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H117,3243,3,CI/CD and DevOps Automation,**Empirical study on the discrepancy between performance testing results from virtual and physical environments**,ICSE/ICSE 18/56.pdf,data/paper-set/infer-set/ICSE/ICSE 18/56.pdf,YES,NO,NO,NO,NO,NO,NO,NO,NO,YES
+H118,807,2,Project Management and Governance,**Corporate Dominance in Open Source Ecosystems: A Case Study of OpenStack**,FSE/FSE 22/22.pdf,data/paper-set/infer-set/FSE/FSE 22/22.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,NO
+H119,1134,3,CI/CD and DevOps Automation,"Trivial Compiler Equivalence: A Large Scale Empirical Study of a Simple, Fast and Effective Equivalent Mutant Detection Technique",ICSE/ICSE 15/15.pdf,data/paper-set/infer-set/ICSE/ICSE 15/15.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H120,3396,3,Community Collaboration and Engagement,51,ICSE/ICSE 18/51.pdf,data/paper-set/infer-set/ICSE/ICSE 18/51.pdf,YES,YES,NO,NO,NO,YES,NO,YES,NO,NO
+H121,1937,5,CI/CD and DevOps Automation,28,ICSE/ICSE 12/28.pdf,data/paper-set/infer-set/ICSE/ICSE 12/28.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H122,668,1,Security Best Practices and Legal Compliance,**Automated Extraction and Validation of Security Policies from Natural-Language Documents**,FSE/FSE 12/1.pdf,data/paper-set/infer-set/FSE/FSE 12/1.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H123,2432,1,Documentation Practices,21,ICSE/ICSE 14/21.pdf,data/paper-set/infer-set/ICSE/ICSE 14/21.pdf,YES,YES,NO,NO,NO,NO,YES,YES,NO,NO
+H124,3698,19,Community Collaboration and Engagement,**Work Practices and Challenges in Pull-Based Development: The Contributor’s Perspective**,ICSE/ICSE 16/20.pdf,data/paper-set/infer-set/ICSE/ICSE 16/20.pdf,YES,NO,NO,NO,NO,YES,NO,YES,NO,NO
+H125,2451,1,Documentation Practices,**Disseminating Architectural Knowledge on Open-Source Projects**,ICSE/ICSE 16/23.pdf,data/paper-set/infer-set/ICSE/ICSE 16/23.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H126,1638,4,Community Collaboration and Engagement,**Leaving My Fingerprints: Motivations and Challenges of Contributing to OSS for Social Good**,ICSE/ICSE 21/22.pdf,data/paper-set/infer-set/ICSE/ICSE 21/22.pdf,YES,NO,NO,NO,NO,YES,NO,YES,NO,NO
+H127,3193,1,Project Management and Governance,9,ICSE/ICSE 18/9.pdf,data/paper-set/infer-set/ICSE/ICSE 18/9.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H128,2351,13,Automated Testing and Quality Assurance,i23_2,ICSE/ICSE 23/i23_2.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_2.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H129,2252,4,Documentation Practices,7,FSE/FSE 15/7.pdf,data/paper-set/infer-set/FSE/FSE 15/7.pdf,YES,YES,NO,NO,NO,NO,YES,NO,YES,NO
+H130,1822,3,Automated Testing and Quality Assurance,27,ICSE/ICSE 12/27.pdf,data/paper-set/infer-set/ICSE/ICSE 12/27.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H131,1009,5,Community Collaboration and Engagement,7,ICSE/ICSE 15/7.pdf,data/paper-set/infer-set/ICSE/ICSE 15/7.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H132,783,3,New Contributor Onboarding and Involvement,23,ICSE/ICSE 15/23.pdf,data/paper-set/infer-set/ICSE/ICSE 15/23.pdf,YES,YES,YES,YES,NO,YES,YES,YES,NO,NO
+H133,2556,2,Community Collaboration and Engagement,**Integrating Adaptive User Interface Capabilities in Enterprise Applications**,ICSE/ICSE 14/11.pdf,data/paper-set/infer-set/ICSE/ICSE 14/11.pdf,YES,YES,NO,NO,NO,YES,NO,NO,NO,NO
+H134,1957,4,CI/CD and DevOps Automation,13,ICSE/ICSE 12/13.pdf,data/paper-set/infer-set/ICSE/ICSE 12/13.pdf,NO,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H135,1255,1,Security Best Practices and Legal Compliance,Vulnerability Detection is Just the Beginning,ICSE/ICSE 21/48.pdf,data/paper-set/infer-set/ICSE/ICSE 21/48.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H136,682,1,Documentation Practices,**Learning to Rank Relevant Files for Bug Reports using Domain Knowledge**,FSE/FSE 14/10.pdf,data/paper-set/infer-set/FSE/FSE 14/10.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H137,3071,3,CI/CD and DevOps Automation,24,ICSE/ICSE 18/24.pdf,data/paper-set/infer-set/ICSE/ICSE 18/24.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H138,1475,4,Documentation Practices,**On Indirectly Dependent Documentation in the Context of Code Evolution: A Study**,ICSE/ICSE 21/34.pdf,data/paper-set/infer-set/ICSE/ICSE 21/34.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,YES
+H139,230,5,CI/CD and DevOps Automation,14,FSE/FSE 17/14.pdf,data/paper-set/infer-set/FSE/FSE 17/14.pdf,YES,NO,NO,NO,NO,NO,NO,NO,NO,YES
+H140,3707,2,CI/CD and DevOps Automation,26,FSE/FSE 21/26.pdf,data/paper-set/infer-set/FSE/FSE 21/26.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H141,2425,3,Code Standards and Maintainability,10,ICSE/ICSE 14/10.pdf,data/paper-set/infer-set/ICSE/ICSE 14/10.pdf,YES,NO,NO,YES,NO,NO,NO,NO,NO,NO
+H142,133,3,CI/CD and DevOps Automation,24,FSE/FSE 20/24.pdf,data/paper-set/infer-set/FSE/FSE 20/24.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H143,144,2,New Contributor Onboarding and Involvement,**Software Documentation and Augmented Reality: Love or Arranged Marriage?**,FSE/FSE 20/14.pdf,data/paper-set/infer-set/FSE/FSE 20/14.pdf,YES,NO,YES,NO,NO,NO,YES,NO,NO,NO
+H144,1637,1,New Contributor Onboarding and Involvement,**Leaving My Fingerprints: Motivations and Challenges of Contributing to OSS for Social Good**,ICSE/ICSE 21/22.pdf,data/paper-set/infer-set/ICSE/ICSE 21/22.pdf,YES,YES,YES,NO,NO,YES,NO,NO,NO,NO
+H145,2865,7,CI/CD and DevOps Automation,31,ICSE/ICSE 22/31.pdf,data/paper-set/infer-set/ICSE/ICSE 22/31.pdf,YES,NO,NO,NO,NO,NO,NO,NO,NO,YES
+H146,736,5,New Contributor Onboarding and Involvement,**Who is Going to Mentor Newcomers in Open Source Projects?**,FSE/FSE 12/2.pdf,data/paper-set/infer-set/FSE/FSE 12/2.pdf,YES,YES,YES,NO,NO,NO,NO,YES,NO,NO
+H147,3629,3,Security Best Practices and Legal Compliance,41,ICSE/ICSE 18/41.pdf,data/paper-set/infer-set/ICSE/ICSE 18/41.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H148,599,3,Project Management and Governance,**Focus-Shifting Patterns of OSS Developers and Their Congruence with Call Graphs**,FSE/FSE 14/8.pdf,data/paper-set/infer-set/FSE/FSE 14/8.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H149,1851,1,Documentation Practices,4,ICSE/ICSE 12/4.pdf,data/paper-set/infer-set/ICSE/ICSE 12/4.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H150,2911,23,New Contributor Onboarding and Involvement,"**Onboarding vs. Diversity, Productivity, and Quality -  Empirical Study of the OpenStack Ecosystem**",ICSE/ICSE 21/23.pdf,data/paper-set/infer-set/ICSE/ICSE 21/23.pdf,YES,YES,YES,NO,NO,NO,NO,NO,NO,YES
+H151,118,6,Security Best Practices and Legal Compliance,**Software Engineering Collaboratories (SEClabs) and Collaboratories as a Service (CaaS)**,FSE/FSE 18/10.pdf,data/paper-set/infer-set/FSE/FSE 18/10.pdf,NO,YES,NO,NO,NO,NO,NO,NO,YES,YES
+H152,1458,2,Documentation Practices,SOAR: A Synthesis Approach for Data Science API Refactoring,ICSE/ICSE 21/5.pdf,data/paper-set/infer-set/ICSE/ICSE 21/5.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H153,441,3,CI/CD and DevOps Automation,9,FSE/FSE 17/9.pdf,data/paper-set/infer-set/FSE/FSE 17/9.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H154,2284,2,Code Standards and Maintainability,**Conflict-aware Inference of Python Compatible Runtime Environments with Domain Knowledge Graph**,ICSE/ICSE 22/21.pdf,data/paper-set/infer-set/ICSE/ICSE 22/21.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,YES
+H155,527,3,CI/CD and DevOps Automation,13,FSE/FSE 17/13.pdf,data/paper-set/infer-set/FSE/FSE 17/13.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H156,2269,1,Code Standards and Maintainability,29,ICSE/ICSE 22/29.pdf,data/paper-set/infer-set/ICSE/ICSE 22/29.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,YES
+H157,1820,5,Documentation Practices,Silent Vulnerable Dependency Alert Prediction with Vulnerability Key Aspect Explanation,ICSE/ICSE 23/i23_28.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_28.pdf,YES,NO,NO,NO,NO,NO,YES,NO,NO,NO
+H158,972,4,Project Management and Governance,9,ICSE/ICSE 19/9.pdf,data/paper-set/infer-set/ICSE/ICSE 19/9.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,YES
+H159,1445,3,CI/CD and DevOps Automation,26,FSE/FSE 22/26.pdf,data/paper-set/infer-set/FSE/FSE 22/26.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H160,472,2,Code Standards and Maintainability,10,FSE/FSE 21/10.pdf,data/paper-set/infer-set/FSE/FSE 21/10.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,NO
+H161,1642,2,Automated Testing and Quality Assurance,Automatic Categorization with Deep Neural Network for Open-Source Java Projects,ICSE/ICSE 17/3.pdf,data/paper-set/infer-set/ICSE/ICSE 17/3.pdf,YES,NO,NO,NO,YES,NO,NO,NO,NO,NO
+H162,1761,2,Code Standards and Maintainability,Learning Syntactic Program Transformations from Examples,ICSE/ICSE 17/18.pdf,data/paper-set/infer-set/ICSE/ICSE 17/18.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,YES
+H163,1024,2,Community Collaboration and Engagement,7,ICSE/ICSE 06/7.pdf,data/paper-set/infer-set/ICSE/ICSE 06/7.pdf,YES,NO,NO,NO,NO,YES,NO,YES,NO,NO
+H164,3600,3,Documentation Practices,7,ICSE/ICSE 10/7.pdf,data/paper-set/infer-set/ICSE/ICSE 10/7.pdf,YES,YES,NO,NO,NO,NO,YES,NO,YES,NO
+H165,3349,4,CI/CD and DevOps Automation,10,ICSE/ICSE 07/10.pdf,data/paper-set/infer-set/ICSE/ICSE 07/10.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H166,2631,3,Code Standards and Maintainability,13,FSE/FSE 19/13.pdf,data/paper-set/infer-set/FSE/FSE 19/13.pdf,YES,YES,NO,YES,YES,NO,NO,NO,NO,NO
+H167,334,4,Security Best Practices and Legal Compliance,22,FSE/FSE 16/22.pdf,data/paper-set/infer-set/FSE/FSE 16/22.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H168,3065,5,Security Best Practices and Legal Compliance,**A Large-Scale Empirical Study on Vulnerability Distribution within Projects and the Lessons Learned**,ICSE/ICSE 20/37.pdf,data/paper-set/infer-set/ICSE/ICSE 20/37.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H169,1532,1,New Contributor Onboarding and Involvement,Skill Recommendation for New Contributors in Open-Source Software,ICSE/ICSE 23/i23_11.pdf,data/paper-set/infer-set/ICSE/ICSE 23/i23_11.pdf,YES,YES,YES,NO,NO,YES,NO,YES,NO,NO
+H170,2537,4,Documentation Practices,17,ICSE/ICSE 13/17.pdf,data/paper-set/infer-set/ICSE/ICSE 13/17.pdf,YES,NO,NO,NO,NO,NO,YES,NO,NO,NO
+H171,709,8,Documentation Practices,Projects Average<br>2500 16<br>14<br>2000<br>12<br>1500 10<br>8<br>1000 6<br>4<br>500<br>2<br>0 0<br># Projects<br>Average<br>**----- End of picture text -----**<br>,FSE/FSE 23/2.pdf,data/paper-set/infer-set/FSE/FSE 23/2.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H172,880,7,Documentation Practices,22,FSE/FSE 23/22.pdf,data/paper-set/infer-set/FSE/FSE 23/22.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H173,3606,1,Community Collaboration and Engagement,**How Are Paid and Volunteer Open Source Developers Different? A Study of the Rust Project**,ICSE/ICSE 24/i24_31.pdf,data/paper-set/infer-set/ICSE/ICSE 24/i24_31.pdf,YES,NO,NO,NO,NO,YES,NO,NO,NO,NO
+H174,2011,4,Documentation Practices,Impact of Code Language Models on Automated Program Repair,ICSE/ICSE 23/33.pdf,data/paper-set/infer-set/ICSE/ICSE 23/33.pdf,YES,YES,NO,NO,NO,NO,YES,NO,YES,NO
+H175,433,5,Security Best Practices and Legal Compliance,**Automated Identification of Security Issues from Commit Messages and Bug Reports**,FSE/FSE 17/12.pdf,data/paper-set/infer-set/FSE/FSE 17/12.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H176,893,3,CI/CD and DevOps Automation,VIATRA Solver: A Framework for the Automated Generation of Consistent Domain-Specific Models,ICSE/ICSE 19/2.pdf,data/paper-set/infer-set/ICSE/ICSE 19/2.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H177,1143,2,New Contributor Onboarding and Involvement,**GitSonifier: Using Sound to Portray Developer Conflict History**,FSE/FSE 15/16.pdf,data/paper-set/infer-set/FSE/FSE 15/16.pdf,YES,YES,YES,NO,NO,NO,NO,NO,NO,NO
+H178,1168,1,Code Standards and Maintainability,**Experiences with Place Lab: An Open Source Toolkit for Location-Aware Computing**,ICSE/ICSE 06/4.pdf,data/paper-set/infer-set/ICSE/ICSE 06/4.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H179,371,7,Documentation Practices,13,FSE/FSE 20/13.pdf,data/paper-set/infer-set/FSE/FSE 20/13.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H180,134,2,CI/CD and DevOps Automation,24,FSE/FSE 20/24.pdf,data/paper-set/infer-set/FSE/FSE 20/24.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
+H181,2505,2,Automated Testing and Quality Assurance,**Performance Regression Testing Target Prioritization via Performance Risk Analysis**,ICSE/ICSE 14/1.pdf,data/paper-set/infer-set/ICSE/ICSE 14/1.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H182,3647,1,Documentation Practices,i24_28,ICSE/ICSE 24/i24_28.pdf,data/paper-set/infer-set/ICSE/ICSE 24/i24_28.pdf,YES,YES,NO,NO,NO,NO,YES,NO,NO,NO
+H183,2560,3,Project Management and Governance,Cassandra: Proactive Conflict Minimization through Optimized Task Scheduling,ICSE/ICSE 13/10.pdf,data/paper-set/infer-set/ICSE/ICSE 13/10.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,NO
+H184,3721,12,Project Management and Governance,**How Do Free/Open Source Developers Pick Their Tools? A Delphi Study of the Debian Project**,ICSE/ICSE 16/5.pdf,data/paper-set/infer-set/ICSE/ICSE 16/5.pdf,YES,NO,NO,NO,NO,NO,NO,YES,NO,YES
+H185,2436,3,Code Standards and Maintainability,13,ICSE/ICSE 14/13.pdf,data/paper-set/infer-set/ICSE/ICSE 14/13.pdf,YES,YES,NO,YES,NO,NO,NO,NO,NO,NO
+H186,2037,3,Project Management and Governance,5,ICSE/ICSE 12/5.pdf,data/paper-set/infer-set/ICSE/ICSE 12/5.pdf,YES,YES,NO,NO,NO,NO,NO,YES,NO,YES
+H187,1773,1,Automated Testing and Quality Assurance,31,ICSE/ICSE 23/31.pdf,data/paper-set/infer-set/ICSE/ICSE 23/31.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H188,1655,8,Documentation Practices,**An Evolutionary Study of Configuration Design and Implementation in Cloud Systems**,ICSE/ICSE 21/10.pdf,data/paper-set/infer-set/ICSE/ICSE 21/10.pdf,YES,NO,NO,NO,NO,NO,YES,NO,NO,NO
+H189,429,1,Security Best Practices and Legal Compliance,**Automated Identification of Security Issues from Commit Messages and Bug Reports**,FSE/FSE 17/12.pdf,data/paper-set/infer-set/FSE/FSE 17/12.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H190,2006,6,Automated Testing and Quality Assurance,16,ICSE/ICSE 12/16.pdf,data/paper-set/infer-set/ICSE/ICSE 12/16.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H191,1118,1,Automated Testing and Quality Assurance,**Semi-supervised Pre-processing for Learning-Based Traceability Framework on Real-World Software Projects**,FSE/FSE 22/11.pdf,data/paper-set/infer-set/FSE/FSE 22/11.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,NO
+H192,3103,8,Project Management and Governance,5,ICSE/ICSE 09/5.pdf,data/paper-set/infer-set/ICSE/ICSE 09/5.pdf,YES,YES,NO,NO,NO,NO,NO,YES,YES,NO
+H193,1330,8,New Contributor Onboarding and Involvement,5,FSE/FSE 22/5.pdf,data/paper-set/infer-set/FSE/FSE 22/5.pdf,YES,YES,YES,NO,NO,YES,NO,NO,NO,NO
+H194,2679,1,Community Collaboration and Engagement,29,FSE/FSE 22/29.pdf,data/paper-set/infer-set/FSE/FSE 22/29.pdf,YES,YES,NO,NO,NO,YES,NO,NO,YES,NO
+H195,733,2,New Contributor Onboarding and Involvement,**Who is Going to Mentor Newcomers in Open Source Projects?**,FSE/FSE 12/2.pdf,data/paper-set/infer-set/FSE/FSE 12/2.pdf,YES,YES,YES,NO,NO,YES,NO,NO,NO,NO
+H196,3792,8,New Contributor Onboarding and Involvement,**Lessons Learned Managing Distributed Software Engineering Courses**,ICSE/ICSE 14/20.pdf,data/paper-set/infer-set/ICSE/ICSE 14/20.pdf,YES,NO,YES,NO,NO,YES,NO,YES,NO,NO
+H197,3245,1,Automated Testing and Quality Assurance,34,ICSE/ICSE 18/34.pdf,data/paper-set/infer-set/ICSE/ICSE 18/34.pdf,YES,YES,NO,NO,YES,NO,NO,NO,NO,YES
+H198,3327,15,New Contributor Onboarding and Involvement,Why Does Code Review Work for Open Source Software Communities?,ICSE/ICSE 19/33.pdf,data/paper-set/infer-set/ICSE/ICSE 19/33.pdf,YES,YES,YES,YES,NO,YES,YES,NO,NO,NO
+H199,517,1,Security Best Practices and Legal Compliance,23,FSE/FSE 23/23.pdf,data/paper-set/infer-set/FSE/FSE 23/23.pdf,YES,YES,NO,NO,NO,NO,NO,NO,YES,NO
+H200,1075,2,CI/CD and DevOps Automation,The List is the Process: Reliable Pre-Integration Tracking of Commits on Mailing Lists,ICSE/ICSE 19/28.pdf,data/paper-set/infer-set/ICSE/ICSE 19/28.pdf,YES,YES,NO,NO,NO,NO,NO,NO,NO,YES
