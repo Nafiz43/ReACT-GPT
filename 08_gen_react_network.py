@@ -42,6 +42,7 @@ import csv
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 from collections import OrderedDict
@@ -95,6 +96,15 @@ CANONICAL_CATEGORIES = {
 
 REQUIRED_COLUMNS = ["actionable", "CATEGORY", "article_title"]
 OPTIONAL_COLUMNS = ["support", "impact", "evidence", "avg_confidence", "SOUND", "PRECISE"]
+
+# The category whose actionables are baked into the main HTML on first load;
+# every other category is shipped as a side-car JSON file fetched only when
+# the user picks it in the browser (see partition_by_category / loadCategoryData).
+DEFAULT_CATEGORY = "New Contributor Onboarding and Involvement"
+
+
+def slugify(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "category"
 
 
 # ── dependency check ───────────────────────────────────────────────────────────
@@ -339,6 +349,68 @@ def build_graph_payload(
         "edge_count":       len(edges),
     }
     return nodes, node_meta, edges, stats, all_ids_ordered, all_texts_ordered
+
+
+# ── per-category partitioning (for lazy front-end loading) ─────────────────────
+
+def partition_by_category(
+    nodes: List[dict],
+    node_meta: List[dict],
+    edges: List[dict],
+    embeddings_by_id: Dict[str, str],
+    default_category: str,
+) -> Tuple[List[dict], List[dict], List[dict], Dict[str, str], Dict[str, dict], str]:
+    """Split the full graph into a 'main' bundle (all 8 category hub nodes +
+    the default category's actionables/edges/embeddings) and one side-car
+    chunk per remaining category (nodes/node_meta/edges/embeddings for the
+    actionables newly introduced by that category — an actionable shared
+    with the default category is not duplicated). The front-end fetches a
+    chunk only when the user selects that category, so first paint only
+    ever has to download/parse/lay out one category's worth of data.
+
+    Returns (main_nodes, main_meta, main_edges, main_embeddings, chunks,
+    resolved_default_category_id).
+    """
+    meta_by_id = {m["id"]: m for m in node_meta}
+    node_by_id = {n["id"]: n for n in nodes}
+    category_meta = [m for m in node_meta if m["node_type"] == "category"]
+    category_ids = [m["id"] for m in category_meta]
+
+    default_cat_id = next(
+        (m["id"] for m in category_meta if m["category"] == default_category), None
+    )
+
+    actionables_by_cat: Dict[str, List[str]] = {cid: [] for cid in category_ids}
+    edges_by_cat: Dict[str, List[dict]] = {cid: [] for cid in category_ids}
+    for e in edges:
+        cid = e["from"]
+        if cid in actionables_by_cat:
+            actionables_by_cat[cid].append(e["to"])
+            edges_by_cat[cid].append(e)
+
+    default_action_ids = set(actionables_by_cat.get(default_cat_id, []))
+
+    main_nodes = [n for n in nodes
+                  if meta_by_id[n["id"]]["node_type"] == "category" or n["id"] in default_action_ids]
+    main_meta = [m for m in node_meta
+                 if m["node_type"] == "category" or m["id"] in default_action_ids]
+    main_edges = edges_by_cat.get(default_cat_id, [])
+    main_embeddings = {nid: b64 for nid, b64 in embeddings_by_id.items() if nid in default_action_ids}
+
+    chunks: Dict[str, dict] = {}
+    for cid in category_ids:
+        if cid == default_cat_id:
+            continue
+        new_action_ids = [aid for aid in actionables_by_cat[cid] if aid not in default_action_ids]
+        chunks[cid] = {
+            "nodes":      [node_by_id[aid] for aid in new_action_ids],
+            "node_meta":  [meta_by_id[aid] for aid in new_action_ids],
+            "edges":      edges_by_cat[cid],
+            "embeddings": {aid: embeddings_by_id[aid] for aid in new_action_ids
+                           if aid in embeddings_by_id},
+        }
+
+    return main_nodes, main_meta, main_edges, main_embeddings, chunks, default_cat_id
 
 
 # ── embedding ──────────────────────────────────────────────────────────────────
@@ -818,7 +890,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
     <!-- ── Stats ─────────────────────────────────────────────────────── -->
     <div class="side-section">
-      <p class="explore-hint"><strong>Browse by category</strong> to focus the graph &mdash; click any actionable node to inspect its insight, evidence, and quality indicators.</p>
+      <p class="explore-hint"><strong>Browse by category</strong> to focus the graph &mdash; only one category loads by default for speed, others load the first time you pick them. Click any actionable node to inspect its insight, evidence, and quality indicators.</p>
       <div class="stats-grid">
         <div class="stat-box">
           <div class="stat-label">Categories</div>
@@ -862,23 +934,27 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
 <script>
 // ── injected data ──────────────────────────────────────────────────────────────
-const ALL_NODES        = __NODES_JSON__;
-const ALL_NODE_META    = __NODE_META_JSON__;
-const ALL_EDGES        = __EDGES_JSON__;
-const GRAPH_STATS      = __STATS_JSON__;
-const BAKED_EMBEDDINGS = __BAKED_EMBEDDINGS__;
+// ALL_NODES / ALL_NODE_META / ALL_EDGES start out scoped to DEFAULT_CATEGORY only
+// (plus the 8 category hub nodes) -- every other category's data lives in a
+// side-car JSON file (CATEGORY_DATA_FILES) fetched lazily by loadCategoryData()
+// the first time the user selects it. This keeps first paint fast: only one
+// category's actionables are downloaded, parsed, and physics-laid-out up front.
+let ALL_NODES           = __NODES_JSON__;
+let ALL_NODE_META       = __NODE_META_JSON__;
+let ALL_EDGES           = __EDGES_JSON__;
+const GRAPH_STATS       = __STATS_JSON__;
+const BAKED_EMBEDDINGS  = __BAKED_EMBEDDINGS__;
+const CATEGORY_DATA_FILES = __CATEGORY_FILES_JSON__;   // category node id -> relative JSON path
+const DEFAULT_CATEGORY    = __DEFAULT_CATEGORY_JSON__;
 // ──────────────────────────────────────────────────────────────────────────────
 
-Object.freeze(ALL_NODES);
-Object.freeze(ALL_NODE_META);
-
-// ── lookup structures ──────────────────────────────────────────────────────────
+// ── lookup structures (mutated in place as more categories are loaded) ─────────
 const nodeMap     = new Map(ALL_NODE_META.map(m => [String(m.id), m]));
-const categoryIds = ALL_NODE_META
+let categoryIds = ALL_NODE_META
   .filter(m => m.node_type === "category")
   .map(m => String(m.id))
   .sort((a,b) => (nodeMap.get(a)?.category||"").localeCompare(nodeMap.get(b)?.category||""));
-const actionableIds = ALL_NODE_META
+let actionableIds = ALL_NODE_META
   .filter(m => m.node_type === "actionable")
   .map(m => String(m.id));
 
@@ -894,18 +970,20 @@ for (const e of ALL_EDGES) {
 }
 
 // ── state ──────────────────────────────────────────────────────────────────────
-let network         = null;
-let nodesDS         = null;
-let edgesDS         = null;
-let selectedCats    = new Set();
-let committedSearch = "";
-let searchMode      = "semantic";
-let threshold       = 0.30;
-let lastActiveMode  = "fallback";
-let embedder        = null;
-let nodeEmbeddings  = null;
-let embedReady      = false;
-let simScores       = new Map();
+let network            = null;
+let nodesDS            = null;
+let edgesDS            = null;
+let selectedCats       = new Set();
+let committedSearch    = "";
+let searchMode         = "semantic";
+let threshold          = 0.30;
+let lastActiveMode     = "fallback";
+let embedder           = null;
+let nodeEmbeddings     = null;
+let embedReady         = false;
+let simScores          = new Map();
+let loadedCategoryIds  = new Set();   // categories whose actionable data is in memory
+let loadingCategoryIds = new Set();   // categories with an in-flight fetch
 
 // quality filter state
 let soundFilter     = "any";
@@ -1045,9 +1123,124 @@ async function embedQuery(text) {
   return out.data.slice(0, out.data.length);
 }
 
+// ── lazy category loading ───────────────────────────────────────────────────────
+/** Fetch one category's side-car JSON (nodes/node_meta/edges/embeddings). */
+async function fetchCategoryChunk(id) {
+  const path = CATEGORY_DATA_FILES[id];
+  if (!path) return null;
+  const resp = await fetch(path);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} loading ${path}`);
+  return resp.json();
+}
+
+/** Merge a fetched chunk into the in-memory graph. Returns true if anything new was added. */
+function mergeCategoryChunk(chunk) {
+  if (!chunk) return false;
+  let changed = false;
+
+  const newVisNodes = [];
+  for (const n of (chunk.nodes || [])) {
+    const id = String(n.id);
+    if (nodeMap.has(id)) continue;
+    ALL_NODES.push(n);
+    newVisNodes.push(n);
+  }
+  for (const m of (chunk.node_meta || [])) {
+    const id = String(m.id);
+    if (nodeMap.has(id)) continue;
+    ALL_NODE_META.push(m);
+    nodeMap.set(id, m);
+    if (m.node_type === "actionable") actionableIds.push(id);
+    changed = true;
+  }
+
+  const newVisEdges = [];
+  const existingEdgeIds = edgesDS ? new Set(edgesDS.getIds().map(String)) : new Set();
+  for (const e of (chunk.edges || [])) {
+    const f = String(e.from), t = String(e.to);
+    if (!catToActions.has(f)) catToActions.set(f, new Set());
+    if (!actionToCats.has(t)) actionToCats.set(t, new Set());
+    catToActions.get(f).add(t);
+    actionToCats.get(t).add(f);
+    if (existingEdgeIds.has(String(e.id))) continue;
+    ALL_EDGES.push(e);
+    newVisEdges.push(e);
+    changed = true;
+  }
+
+  if (nodeEmbeddings) {
+    for (const [id, b64] of Object.entries(chunk.embeddings || {})) {
+      if (nodeEmbeddings.has(id)) continue;
+      const bin = atob(b64);
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      nodeEmbeddings.set(id, new Float32Array(buf.buffer));
+    }
+  }
+
+  if (newVisNodes.length) nodesDS.update(newVisNodes.map(n => visNode(n)));
+  if (newVisEdges.length) edgesDS.update(newVisEdges.map(e => ({id:e.id, from:e.from, to:e.to, width:e.width})));
+  return changed;
+}
+
+/** Re-run physics briefly so newly-added nodes settle, then freeze again. */
+function restabilize() {
+  if (!network) return;
+  const overlay  = document.getElementById("stabOverlay");
+  const stabText = document.getElementById("stabText");
+  const stabBar  = document.getElementById("stabBarFill");
+  overlay.classList.remove("hidden");
+  stabText.textContent = "Laying out new actionables…";
+  stabBar.style.width = "0%";
+  network.setOptions({physics:{enabled:true, stabilization:{enabled:true, iterations:200, fit:true}}});
+  network.once("stabilizationIterationsDone", () => {
+    network.setOptions({physics:{enabled:false}});
+    network.fit({animation:{duration:500, easingFunction:"easeInOutQuad"}});
+    overlay.classList.add("hidden");
+    applyStyles(); updateSummary(); renderCategoryPanel();
+  });
+  network.stabilize(200);
+}
+
+/** Fetch + merge a batch of not-yet-loaded categories as one unit (one restabilize). */
+async function loadCategories(ids) {
+  const targets = [...new Set(ids)].filter(
+    id => !loadedCategoryIds.has(id) && !loadingCategoryIds.has(id) && CATEGORY_DATA_FILES[id]
+  );
+  if (!targets.length) return;
+  targets.forEach(id => loadingCategoryIds.add(id));
+  renderCategoryPanel();
+
+  const chunks = await Promise.all(targets.map(id =>
+    fetchCategoryChunk(id).catch(err => { console.error("Failed to load category", id, err); return null; })
+  ));
+
+  let changed = false;
+  chunks.forEach((chunk, i) => {
+    if (mergeCategoryChunk(chunk)) changed = true;
+    loadedCategoryIds.add(targets[i]);
+    loadingCategoryIds.delete(targets[i]);
+  });
+
+  if (changed) restabilize();
+  else { applyStyles(); renderCategoryPanel(); }
+}
+
+/** Used by "Show all" / a committed search — pull in every remaining category. */
+async function ensureAllCategoriesLoaded() {
+  const toLoad = categoryIds.filter(id => !loadedCategoryIds.has(id) && CATEGORY_DATA_FILES[id]);
+  if (!toLoad.length) return;
+  const prevAiState = document.getElementById("aiPill").className;
+  setAIPill("loading", `Loading ${toLoad.length} more categor${toLoad.length===1?"y":"ies"}…`, 0);
+  await loadCategories(toLoad);
+  if (embedReady) setAIPill("ready", `Semantic search ready ✓  (${nodeEmbeddings?nodeEmbeddings.size:0} nodes)`);
+  else if (!prevAiState.includes("loading")) setAIPill("loading", "Initialising…");
+}
+
 // ── search ─────────────────────────────────────────────────────────────────────
-function commitSearch() {
+async function commitSearch() {
   committedSearch = document.getElementById("searchBox").value.trim();
+  if (committedSearch) await ensureAllCategoriesLoaded();
   runSearch();
 }
 async function runSearch() {
@@ -1231,8 +1424,17 @@ function buildVisibility() {
     return true;
   }
 
-  // A category is visible when at least one of its actionables is visible
+  // A category is visible when at least one of its actionables is visible.
+  // A category whose data hasn't been fetched yet has no actionables in
+  // memory at all -- keep its hub visible/clickable by default (so the user
+  // can select it to trigger a load) unless an active search or a *different*
+  // category selection would otherwise hide it.
   function isCategoryVisible(id) {
+    if (!loadedCategoryIds.has(id)) {
+      if (hasSearch) return false;
+      if (hasSel && !selectedCats.has(id)) return false;
+      return true;
+    }
     return [...(catToActions.get(id)||[])].some(a => isActionableVisible(a));
   }
 
@@ -1336,23 +1538,44 @@ function renderCategoryPanel() {
     const scoreStr = (term && !isKW && s>0) ? (s*100).toFixed(0)+"%" : "";
     const isSel   = selectedCats.has(id);
     const isDir   = term && (isKW ? s>0 : s>=threshold);
+    const isLoading = loadingCategoryIds.has(id);
+    const notLoaded = !loadedCategoryIds.has(id) && !isLoading;
+    const tag = isLoading
+      ? ' <span style="opacity:.7;font-weight:400">(loading…)</span>'
+      : notLoaded ? ' <span style="opacity:.55;font-weight:400">(click to load)</span>' : '';
     return `<button class="group-item${isSel?" selected":""}${isDir?" matched":""}"
-              onclick="toggleCat('${id}')">
-      <span>${esc(m?.category||id)}</span>
+              onclick="toggleCat('${id}')"${isLoading?" disabled":""}>
+      <span>${esc(m?.category||id)}${tag}</span>
       ${scoreStr?`<span class="sim-score">${scoreStr}</span>`:""}
     </button>`;
   }).join("");
 }
 
-function toggleCat(id) {
-  if (selectedCats.has(id)) selectedCats.delete(id); else selectedCats.add(id);
+async function toggleCat(id) {
+  if (selectedCats.has(id)) {
+    selectedCats.delete(id);
+    document.getElementById("statSelected").textContent = selectedCats.size;
+    applyStyles(); renderCategoryPanel();
+    return;
+  }
+  selectedCats.add(id);
   document.getElementById("statSelected").textContent = selectedCats.size;
   applyStyles(); renderCategoryPanel();
+  await loadCategories([id]);
+  applyStyles(); renderCategoryPanel();
 }
-function selectVisible() {
+async function selectVisible() {
   const { isCategoryVisible } = buildVisibility();
-  for (const id of categoryIds) { if (isCategoryVisible(id)) selectedCats.add(id); }
+  const toLoad = [];
+  for (const id of categoryIds) {
+    if (isCategoryVisible(id)) {
+      selectedCats.add(id);
+      if (!loadedCategoryIds.has(id)) toLoad.push(id);
+    }
+  }
   document.getElementById("statSelected").textContent = selectedCats.size;
+  applyStyles(); renderCategoryPanel();
+  await loadCategories(toLoad);
   applyStyles(); renderCategoryPanel();
 }
 function clearSelection() {
@@ -1462,7 +1685,7 @@ function setSearchMode(mode) {
 }
 function fitView() { if(network) network.fit({animation:{duration:400,easingFunction:"easeInOutQuad"}}); }
 
-function showAll() {
+async function showAll() {
   // Reset search
   document.getElementById("searchBox").value = "";
   document.getElementById("searchClear").classList.remove("visible");
@@ -1480,6 +1703,9 @@ function showAll() {
   updateFilterBadge();
   // Single redraw
   applyStyles(); renderCategoryPanel(); resetDetail(); fitView();
+  // "Show all" means all -- pull in any category not yet loaded.
+  await ensureAllCategoriesLoaded();
+  fitView();
 }
 
 // ── summary ────────────────────────────────────────────────────────────────────
@@ -1526,11 +1752,12 @@ function toggleTheme() {
   document.getElementById("scActions").textContent = GRAPH_STATS.actionable_count;
   document.getElementById("scEdges").textContent   = GRAPH_STATS.edge_count;
 
-  // Pre-select the default category so only its actionables are visible on load
-  const DEFAULT_CATEGORY = "New Contributor Onboarding and Involvement";
+  // Pre-select the default category -- its actionables already shipped in the
+  // main bundle, so it's marked loaded immediately with no fetch needed.
   for (const m of ALL_NODE_META) {
     if (m.node_type === "category" && m.category === DEFAULT_CATEGORY) {
       selectedCats.add(String(m.id));
+      loadedCategoryIds.add(String(m.id));
       break;
     }
   }
@@ -1556,23 +1783,27 @@ def generate_html(
     node_meta: List[dict],
     edges: List[dict],
     stats: dict,
+    default_category: str,
+    category_files: Dict[str, str],
     node_ids: Optional[List[str]] = None,
     embeddings_b64: Optional[List[str]] = None,
 ) -> str:
     if node_ids and embeddings_b64 and len(node_ids) == len(embeddings_b64):
         baked = {nid: b64 for nid, b64 in zip(node_ids, embeddings_b64)}
         baked_json = json.dumps(baked, ensure_ascii=False)
-        tqdm.write(f"  ✓  Baking {len(baked)} node embeddings into HTML.")
+        tqdm.write(f"  ✓  Baking {len(baked)} node embeddings into HTML (default category only).")
     else:
         baked_json = "null"
         tqdm.write("  ✗  No embeddings baked — HTML will use keyword search only.")
     return (
         HTML_TEMPLATE
-        .replace("__NODES_JSON__",       json.dumps(nodes,     ensure_ascii=False))
-        .replace("__NODE_META_JSON__",   json.dumps(node_meta, ensure_ascii=False))
-        .replace("__EDGES_JSON__",       json.dumps(edges,     ensure_ascii=False))
-        .replace("__STATS_JSON__",       json.dumps(stats,     ensure_ascii=False))
-        .replace("__BAKED_EMBEDDINGS__", baked_json)
+        .replace("__NODES_JSON__",          json.dumps(nodes,          ensure_ascii=False))
+        .replace("__NODE_META_JSON__",      json.dumps(node_meta,      ensure_ascii=False))
+        .replace("__EDGES_JSON__",          json.dumps(edges,          ensure_ascii=False))
+        .replace("__STATS_JSON__",          json.dumps(stats,          ensure_ascii=False))
+        .replace("__BAKED_EMBEDDINGS__",    baked_json)
+        .replace("__CATEGORY_FILES_JSON__", json.dumps(category_files, ensure_ascii=False))
+        .replace("__DEFAULT_CATEGORY_JSON__", json.dumps(default_category, ensure_ascii=False))
     )
 
 
@@ -1581,6 +1812,28 @@ def write_html(output_path: Path, html_text: str) -> None:
     with tqdm(total=1, desc="  Writing HTML", unit="file") as bar:
         output_path.write_text(html_text, encoding="utf-8")
         bar.update(1)
+
+
+def write_category_chunks(
+    chunks: Dict[str, dict],
+    category_names: Dict[str, str],
+    output_html: Path,
+) -> Dict[str, str]:
+    """Write one JSON side-car file per non-default category next to the
+    output HTML, in a `<stem>_data/` folder. Returns {category_id: relative
+    path} for baking into the main HTML as CATEGORY_DATA_FILES."""
+    data_dir = output_html.parent / f"{output_html.stem}_data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    manifest: Dict[str, str] = {}
+    with tqdm(chunks.items(), desc="  Writing category chunks", unit="file", total=len(chunks)) as bar:
+        for cid, chunk in bar:
+            slug = slugify(category_names[cid])
+            fname = f"{slug}.json"
+            (data_dir / fname).write_text(
+                json.dumps(chunk, ensure_ascii=False), encoding="utf-8"
+            )
+            manifest[cid] = f"{data_dir.name}/{fname}"
+    return manifest
 
 
 # ── main ───────────────────────────────────────────────────────────────────────
@@ -1595,6 +1848,10 @@ def main() -> None:
                         help="Skip embedding — keyword search only in browser")
     parser.add_argument("--workers",     type=int, default=1,
                         help="Parallel embedding workers (default 1)")
+    parser.add_argument("--default-category", type=str, default=DEFAULT_CATEGORY,
+                        help="Category baked into the main HTML on first load; "
+                             "every other category is fetched on demand in the browser "
+                             f"(default: {DEFAULT_CATEGORY!r})")
     args = parser.parse_args()
 
     if not args.skip_embed:
@@ -1606,11 +1863,11 @@ def main() -> None:
         else:
             print("  ✓  sentence-transformers and numpy found.")
 
-    print(f"\n[1/5] Reading {args.input_csv}")
+    print(f"\n[1/6] Reading {args.input_csv}")
     rows = read_csv_rows(args.input_csv)
     print(f"      {len(rows)} usable row(s) loaded")
 
-    print("\n[2/5] Building graph payload …")
+    print("\n[2/6] Building graph payload …")
     nodes, node_meta, edges, stats, node_ids, node_texts = build_graph_payload(rows)
     print(f"      categories={stats['category_count']}  "
           f"actionables={stats['actionable_count']}  "
@@ -1618,30 +1875,60 @@ def main() -> None:
 
     embeddings_b64 = None
     if not args.skip_embed:
-        print(f"\n[3/5] Embedding {len(node_texts)} node texts (workers={args.workers}) …")
+        print(f"\n[3/6] Embedding {len(node_texts)} node texts (workers={args.workers}) …")
         embeddings_b64 = embed_texts(node_texts, n_workers=args.workers)
         if embeddings_b64 is None:
             print("  ✗  Embedding returned None — HTML will be keyword-only.")
     else:
-        print("\n[3/5] Skipping embedding (--skip-embed).")
+        print("\n[3/6] Skipping embedding (--skip-embed).")
 
-    print("\n[4/5] Rendering HTML …")
+    print("\n[4/6] Partitioning graph by category (default category loads eagerly;"
+          " the rest load on demand in the browser) …")
+    category_names = sorted(m["category"] for m in node_meta if m["node_type"] == "category")
+    default_category = args.default_category
+    if default_category not in category_names:
+        tqdm.write(f"  ⚠  Default category {default_category!r} not found in the data; "
+                    f"falling back to {category_names[0]!r}.")
+        default_category = category_names[0]
+
+    embeddings_by_id = dict(zip(node_ids, embeddings_b64)) if embeddings_b64 else {}
+    main_nodes, main_meta, main_edges, main_embeddings, chunks, default_cat_id = (
+        partition_by_category(nodes, node_meta, edges, embeddings_by_id, default_category)
+    )
+    cat_name_by_id = {m["id"]: m["category"] for m in node_meta if m["node_type"] == "category"}
+    default_actionable_count = sum(1 for m in main_meta if m["node_type"] == "actionable")
+    print(f"      default category {default_category!r}: "
+          f"{default_actionable_count}/{stats['actionable_count']} actionables baked into main HTML")
+    print(f"      {len(chunks)} other categories deferred to on-demand side-car files")
+
+    print("\n[5/6] Writing category side-car files + rendering HTML …")
+    category_files = write_category_chunks(chunks, cat_name_by_id, args.output_html)
+    main_node_ids = list(main_embeddings.keys()) if main_embeddings else None
+    main_embeddings_b64 = list(main_embeddings.values()) if main_embeddings else None
     with tqdm(total=1, desc="  Serialising", unit="step") as bar:
-        html_text = generate_html(nodes, node_meta, edges, stats, node_ids, embeddings_b64)
+        html_text = generate_html(
+            main_nodes, main_meta, main_edges, stats,
+            default_category, category_files,
+            main_node_ids, main_embeddings_b64,
+        )
         bar.update(1)
 
-    print(f"\n[5/5] Writing {args.output_html}")
+    print(f"\n[6/6] Writing {args.output_html}")
     write_html(args.output_html, html_text)
 
     kb = len(html_text.encode()) // 1024
-    print(f"\n  Done!  {kb} KB → {args.output_html}")
+    print(f"\n  Done!  {kb} KB → {args.output_html}  (was a single ~12 MB file before "
+          f"per-category lazy loading)")
     if embeddings_b64:
         print("  🧠  Semantic search: baked embeddings + Transformers.js query model")
     else:
         print("  🔤  Semantic search: DISABLED (keyword only).")
         print("      To enable: pip install sentence-transformers numpy")
         print("      Then re-run without --skip-embed")
-    print("  Open the HTML directly in any browser — no server needed.\n")
+    print(f"  {len(category_files)} category file(s) written under "
+          f"{args.output_html.parent / (args.output_html.stem + '_data')}/")
+    print("  Open the HTML in a browser served over http(s) (e.g. GitHub Pages) so the "
+          "on-demand category fetches work — file:// may block them in some browsers.\n")
 
 
 if __name__ == "__main__":
