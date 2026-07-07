@@ -109,6 +109,11 @@ DEFAULT_DATASET_URL = (
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSnHNS0fcQtn0F5IWbNcTB7HS_nbtVMtQ8vBYf0Ebqt3pbfKf3Bvd_dp3tLNtdmnQiSm44HGZ3bOrJA/pubhtml?gid=1298707173&single=true"
 )
 
+# Number of source articles the underlying corpus was mined from (the CSV's
+# row count is actionable-level, not article-level, so this is tracked
+# separately for the About panel's "Source Papers" stat).
+SOURCE_PAPER_COUNT = 829
+
 
 def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "category"
@@ -553,10 +558,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
                    color:var(--accent);margin-bottom:8px}
     .modal-title{font-size:23px;font-weight:800;line-height:1.32;margin-bottom:16px;color:var(--text)}
     .modal-text{font-size:13.5px;line-height:1.75;color:var(--text);margin-bottom:13px}
-    .modal-cta{padding:13px 15px;margin-top:4px;border-radius:9px;font-size:13px;color:var(--text);
-               background:linear-gradient(135deg,rgba(37,99,235,.09) 0%,rgba(37,99,235,.02) 100%);
-               border-left:4px solid var(--accent)}
-    [data-theme="dark"] .modal-cta{background:linear-gradient(135deg,rgba(88,166,255,.13) 0%,rgba(88,166,255,.03) 100%)}
     .modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}
     .modal-stats .stat-box{padding:11px 6px;text-align:center}
     .modal-stats .stat-label{font-size:9px}
@@ -824,7 +825,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <div class="stat-box"><div class="stat-label">Source Papers</div><div class="stat-val" id="aboutRows">0</div></div>
       <div class="stat-box"><div class="stat-label">Connections</div><div class="stat-val" id="aboutEdges">0</div></div>
     </div>
-    <p class="modal-text modal-cta">ReACTive is a University of California, Davis technology, offered here as supplementary material. Organizations interested in licensing, integrating, or collaborating around this technology are warmly invited to reach out &mdash; <a href="mailto:nikhan@ucdavis.edu" style="color:var(--accent);font-weight:700">nikhan@ucdavis.edu</a>.</p>
     <div class="modal-btn-row">
       <a class="btn btn-primary" href="__DATASET_URL__" target="_blank" rel="noopener">View the full dataset &rarr;</a>
       <button class="btn btn-secondary" onclick="closeAbout()">Start exploring</button>
@@ -1001,6 +1001,7 @@ const GRAPH_STATS       = __STATS_JSON__;
 const BAKED_EMBEDDINGS  = __BAKED_EMBEDDINGS__;
 const CATEGORY_DATA_FILES = __CATEGORY_FILES_JSON__;   // category node id -> relative JSON path
 const DEFAULT_CATEGORY    = __DEFAULT_CATEGORY_JSON__;
+const SOURCE_PAPER_COUNT  = __SOURCE_PAPER_COUNT_JSON__;
 // ──────────────────────────────────────────────────────────────────────────────
 
 // ── lookup structures (mutated in place as more categories are loaded) ─────────
@@ -1563,11 +1564,16 @@ function renderCategoryPanel() {
   const { isActionableVisible, isCategoryVisible, catBestScore, isKW } = buildVisibility();
 
   const visible = categoryIds.filter(id => isCategoryVisible(id));
+  // The clickable list always offers every category to pick from -- only a
+  // committed search narrows it down to relevance matches. Browsing/selection
+  // state (which category is currently focused in the graph) never hides a
+  // category from this list; it only controls the graph's own opacity.
+  const listed = term ? visible : categoryIds;
 
   // Count visible actionables for stats
   const visibleActionCount = actionableIds.filter(id => isActionableVisible(id)).length;
 
-  document.getElementById("catCountBadge").textContent = visible.length;
+  document.getElementById("catCountBadge").textContent = listed.length;
   // Show filtered/total when a filter reduces the count
   document.getElementById("statCats").textContent =
     visible.length < categoryIds.length
@@ -1579,13 +1585,13 @@ function renderCategoryPanel() {
       : actionableIds.length;
   document.getElementById("statSelected").textContent = selectedCats.size;
 
-  if (!visible.length) {
+  if (!listed.length) {
     el.innerHTML = '<div class="empty-note">No categories match current filters.</div>'; return;
   }
 
   const sorted = term
-    ? [...visible].sort((a,b) => catBestScore(b) - catBestScore(a))
-    : visible;
+    ? [...listed].sort((a,b) => catBestScore(b) - catBestScore(a))
+    : listed;
 
   el.innerHTML = sorted.map(id => {
     const m       = nodeMap.get(id);
@@ -1809,7 +1815,7 @@ document.addEventListener("keydown", e => {
     applyTheme(saved ? saved === "dark" : prefersDark);
   } catch(e) { applyTheme(false); }
 
-  document.getElementById("aboutRows").textContent    = GRAPH_STATS.row_count;
+  document.getElementById("aboutRows").textContent    = SOURCE_PAPER_COUNT;
   document.getElementById("aboutCats").textContent    = GRAPH_STATS.category_count;
   document.getElementById("aboutActions").textContent = GRAPH_STATS.actionable_count;
   document.getElementById("aboutEdges").textContent   = GRAPH_STATS.edge_count;
@@ -1849,6 +1855,7 @@ def generate_html(
     default_category: str,
     category_files: Dict[str, str],
     dataset_url: str,
+    source_paper_count: int = SOURCE_PAPER_COUNT,
     node_ids: Optional[List[str]] = None,
     embeddings_b64: Optional[List[str]] = None,
 ) -> str:
@@ -1869,6 +1876,7 @@ def generate_html(
         .replace("__CATEGORY_FILES_JSON__", json.dumps(category_files, ensure_ascii=False))
         .replace("__DEFAULT_CATEGORY_JSON__", json.dumps(default_category, ensure_ascii=False))
         .replace("__DATASET_URL__",         dataset_url)
+        .replace("__SOURCE_PAPER_COUNT_JSON__", json.dumps(source_paper_count))
     )
 
 
@@ -1976,7 +1984,7 @@ def main() -> None:
         html_text = generate_html(
             main_nodes, main_meta, main_edges, stats,
             default_category, category_files, args.dataset_url,
-            main_node_ids, main_embeddings_b64,
+            node_ids=main_node_ids, embeddings_b64=main_embeddings_b64,
         )
         bar.update(1)
 
