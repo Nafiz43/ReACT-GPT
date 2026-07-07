@@ -102,6 +102,13 @@ OPTIONAL_COLUMNS = ["support", "impact", "evidence", "avg_confidence", "SOUND", 
 # the user picks it in the browser (see partition_by_category / loadCategoryData).
 DEFAULT_CATEGORY = "New Contributor Onboarding and Involvement"
 
+# Public, read-only Google Sheets view of the full underlying dataset — linked
+# from the topbar and the About panel so visitors can inspect/download the
+# raw data behind the tool.
+DEFAULT_DATASET_URL = (
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSnHNS0fcQtn0F5IWbNcTB7HS_nbtVMtQ8vBYf0Ebqt3pbfKf3Bvd_dp3tLNtdmnQiSm44HGZ3bOrJA/pubhtml?gid=1298707173&single=true"
+)
+
 
 def slugify(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_") or "category"
@@ -521,11 +528,40 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     .eyebrow{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
              color:var(--accent);margin-bottom:2px}
     .topbar h1{font-size:15px;font-weight:700;line-height:1.2}
-    .stat-chips{display:flex;gap:8px;flex-wrap:wrap}
-    .stat-chip{font-size:11px;font-family:'IBM Plex Mono',monospace;padding:4px 9px;
-               border-radius:99px;border:1px solid var(--border);
-               background:var(--surface2);color:var(--muted)}
-    .stat-chip b{color:var(--text)}
+    .topbar-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+    .btn-topbar{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;
+                border-radius:8px;font-size:12px;font-weight:700;border:1px solid var(--border);
+                background:var(--surface2);color:var(--text);cursor:pointer;text-decoration:none;
+                font-family:'IBM Plex Sans',sans-serif;transition:all .15s;white-space:nowrap}
+    .btn-topbar:hover{border-color:var(--accent);color:var(--accent)}
+    .btn-topbar-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .btn-topbar-accent:hover{opacity:.88;color:#fff}
+    /* about modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(3px);
+                   display:flex;align-items:center;justify-content:center;z-index:50;
+                   padding:24px;opacity:1;transition:opacity .2s ease}
+    .modal-overlay.hidden{opacity:0;pointer-events:none}
+    .modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+                max-width:580px;width:100%;max-height:88vh;overflow-y:auto;padding:30px 32px;
+                box-shadow:0 24px 70px rgba(15,23,42,.4);position:relative}
+    .modal-close{position:absolute;top:14px;right:14px;width:30px;height:30px;
+                 background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+                 font-size:18px;line-height:1;cursor:pointer;color:var(--muted);
+                 display:flex;align-items:center;justify-content:center;transition:all .15s}
+    .modal-close:hover{color:var(--text);border-color:var(--accent)}
+    .modal-eyebrow{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+                   color:var(--accent);margin-bottom:8px}
+    .modal-title{font-size:23px;font-weight:800;line-height:1.32;margin-bottom:16px;color:var(--text)}
+    .modal-text{font-size:13.5px;line-height:1.75;color:var(--text);margin-bottom:13px}
+    .modal-cta{padding:13px 15px;margin-top:4px;border-radius:9px;font-size:13px;color:var(--text);
+               background:linear-gradient(135deg,rgba(37,99,235,.09) 0%,rgba(37,99,235,.02) 100%);
+               border-left:4px solid var(--accent)}
+    [data-theme="dark"] .modal-cta{background:linear-gradient(135deg,rgba(88,166,255,.13) 0%,rgba(88,166,255,.03) 100%)}
+    .modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}
+    .modal-stats .stat-box{padding:11px 6px;text-align:center}
+    .modal-stats .stat-label{font-size:9px}
+    .modal-stats .stat-val{font-size:19px}
+    .modal-btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
     /* ai pill */
     .ai-pill{display:flex;align-items:center;gap:6px;flex-shrink:0;min-width:200px;
              padding:5px 11px;border-radius:99px;font-size:11px;font-weight:700;
@@ -774,6 +810,27 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   </style>
 </head>
 <body>
+<div class="modal-overlay" id="aboutOverlay" onclick="if(event.target===this) closeAbout()">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeAbout()" aria-label="Close">&times;</button>
+    <div class="modal-eyebrow">About ReACTive</div>
+    <div class="modal-title">From software engineering research to practitioner action &mdash; instantly.</div>
+    <p class="modal-text">Every year, thousands of software engineering research papers uncover what actually works &mdash; better onboarding practices, sturdier CI/CD pipelines, safer security habits, healthier open-source communities. Almost none of it ever reaches the people building real software. <strong>ReACTive closes that gap.</strong></p>
+    <p class="modal-text">ReACTive is an intelligent discovery engine that turns the collective knowledge of the software engineering research community into a single, searchable catalog of <strong>ready-to-adopt, evidence-backed actions</strong>. Instead of reading hundreds of papers, practitioners, maintainers, and engineering leaders can search, browse, and filter by category to find concrete recommendations &mdash; each paired with its real-world impact and the empirical evidence behind it &mdash; and put them to work immediately.</p>
+    <p class="modal-text">Behind the scenes, ReACTive is powered by a comprehensive, AI-assisted mining pipeline that has systematically analyzed papers from top-tier software engineering venues to extract, validate, and organize this catalog of actionable recommendations &mdash; so the hard work of finding what works has already been done for you.</p>
+    <div class="modal-stats">
+      <div class="stat-box"><div class="stat-label">Categories</div><div class="stat-val" style="color:#6baed6" id="aboutCats">0</div></div>
+      <div class="stat-box"><div class="stat-label">Actionables</div><div class="stat-val" style="color:#fb6a4a" id="aboutActions">0</div></div>
+      <div class="stat-box"><div class="stat-label">Source Papers</div><div class="stat-val" id="aboutRows">0</div></div>
+      <div class="stat-box"><div class="stat-label">Connections</div><div class="stat-val" id="aboutEdges">0</div></div>
+    </div>
+    <p class="modal-text modal-cta">ReACTive is a University of California, Davis technology, offered here as supplementary material. Organizations interested in licensing, integrating, or collaborating around this technology are warmly invited to reach out &mdash; <a href="mailto:nikhan@ucdavis.edu" style="color:var(--accent);font-weight:700">nikhan@ucdavis.edu</a>.</p>
+    <div class="modal-btn-row">
+      <a class="btn btn-primary" href="__DATASET_URL__" target="_blank" rel="noopener">View the full dataset &rarr;</a>
+      <button class="btn btn-secondary" onclick="closeAbout()">Start exploring</button>
+    </div>
+  </div>
+</div>
 <div class="app">
   <main class="main">
     <div class="topbar">
@@ -781,11 +838,9 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
         <div class="eyebrow">ReACTive</div>
         <h1>Intelligent Actionable Search Tool</h1>
       </div>
-      <div class="stat-chips">
-        <div class="stat-chip"><b id="scRows">0</b> rows</div>
-        <div class="stat-chip"><b id="scCats">0</b> categories</div>
-        <div class="stat-chip"><b id="scActions">0</b> actionables</div>
-        <div class="stat-chip"><b id="scEdges">0</b> edges</div>
+      <div class="topbar-actions">
+        <button class="btn-topbar" id="aboutBtn" onclick="openAbout()">&#8505;&#65039; About</button>
+        <a class="btn-topbar btn-topbar-accent" href="__DATASET_URL__" target="_blank" rel="noopener">&#128202; View Dataset</a>
       </div>
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()"
               title="Toggle dark / light mode" aria-label="Toggle theme">
@@ -1739,6 +1794,13 @@ function toggleTheme() {
   try { localStorage.setItem("react_network_theme", next ? "dark" : "light"); } catch(e){}
 }
 
+// ── about modal ──────────────────────────────────────────────────────────────
+function openAbout() { document.getElementById("aboutOverlay").classList.remove("hidden"); }
+function closeAbout() { document.getElementById("aboutOverlay").classList.add("hidden"); }
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeAbout();
+});
+
 // ── boot ───────────────────────────────────────────────────────────────────────
 (function boot() {
   try {
@@ -1747,10 +1809,11 @@ function toggleTheme() {
     applyTheme(saved ? saved === "dark" : prefersDark);
   } catch(e) { applyTheme(false); }
 
-  document.getElementById("scRows").textContent    = GRAPH_STATS.row_count;
-  document.getElementById("scCats").textContent    = GRAPH_STATS.category_count;
-  document.getElementById("scActions").textContent = GRAPH_STATS.actionable_count;
-  document.getElementById("scEdges").textContent   = GRAPH_STATS.edge_count;
+  document.getElementById("aboutRows").textContent    = GRAPH_STATS.row_count;
+  document.getElementById("aboutCats").textContent    = GRAPH_STATS.category_count;
+  document.getElementById("aboutActions").textContent = GRAPH_STATS.actionable_count;
+  document.getElementById("aboutEdges").textContent   = GRAPH_STATS.edge_count;
+  openAbout();
 
   // Pre-select the default category -- its actionables already shipped in the
   // main bundle, so it's marked loaded immediately with no fetch needed.
@@ -1785,6 +1848,7 @@ def generate_html(
     stats: dict,
     default_category: str,
     category_files: Dict[str, str],
+    dataset_url: str,
     node_ids: Optional[List[str]] = None,
     embeddings_b64: Optional[List[str]] = None,
 ) -> str:
@@ -1804,6 +1868,7 @@ def generate_html(
         .replace("__BAKED_EMBEDDINGS__",    baked_json)
         .replace("__CATEGORY_FILES_JSON__", json.dumps(category_files, ensure_ascii=False))
         .replace("__DEFAULT_CATEGORY_JSON__", json.dumps(default_category, ensure_ascii=False))
+        .replace("__DATASET_URL__",         dataset_url)
     )
 
 
@@ -1852,6 +1917,8 @@ def main() -> None:
                         help="Category baked into the main HTML on first load; "
                              "every other category is fetched on demand in the browser "
                              f"(default: {DEFAULT_CATEGORY!r})")
+    parser.add_argument("--dataset-url", type=str, default=DEFAULT_DATASET_URL,
+                        help="Link to the published dataset, shown in the topbar and About panel")
     args = parser.parse_args()
 
     if not args.skip_embed:
@@ -1908,7 +1975,7 @@ def main() -> None:
     with tqdm(total=1, desc="  Serialising", unit="step") as bar:
         html_text = generate_html(
             main_nodes, main_meta, main_edges, stats,
-            default_category, category_files,
+            default_category, category_files, args.dataset_url,
             main_node_ids, main_embeddings_b64,
         )
         bar.update(1)
