@@ -1,0 +1,1084 @@
+{
+ "data/paper-set/infer-set/ICSE/ICSE 16/14.pdf": {
+  "title": "Software release planning",
+  "doi": "10.1145/2889160.2891051",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 05/2.pdf": {
+  "title": "Enriching software engineering courses with service-learning projects and the open-source approach",
+  "doi": "10.1109/icse.2005.1553612",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.995,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/24.pdf": {
+  "title": "The Shifting Sands of Motivation: Revisiting What Drives Contributors in Open Source",
+  "doi": "10.1109/icse43902.2021.00098",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/17.pdf": {
+  "title": "Automated detection of password leakage from public GitHub repositories",
+  "doi": "10.1145/3510003.3510150",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 13/7.pdf": {
+  "title": "Diversity in software engineering research",
+  "doi": "10.1016/b978-0-12-804206-9.00053-2",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/21.pdf": {
+  "title": "A Vision of Crowd Development",
+  "doi": "10.1109/icse.2015.194",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/5.pdf": {
+  "title": "A first look at good first issues on GitHub",
+  "doi": "10.1145/3368089.3409746",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/31.pdf": {
+  "title": "Lessons from eight years of operational data from a continuous integration service",
+  "doi": "10.1145/3510003.3510211",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 13/23.pdf": {
+  "title": "A hands-on Java Pathfinder tutorial",
+  "doi": "10.1109/icse.2013.6606756",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/34.pdf": {
+  "title": "NPEX",
+  "doi": "10.1145/3510003.3510186",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 19/16.pdf": {
+  "title": "On the use of lambda expressions in 760 open source Python projects",
+  "doi": "10.1145/3338906.3342499",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/24.pdf": {
+  "title": "Triggering Modes in Spectrum-Based Multi-location Fault Localization",
+  "doi": "10.1145/3611643.3613884",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/18.pdf": {
+  "title": "\u201cWe Feel Like We\u2019re Winging It:\u201d A Study on Navigating Open-Source Dependency Abandonment",
+  "doi": "10.1145/3611643.3616293",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/1.pdf": {
+  "title": "Playing Planning Poker in Crowds: Human Computation of Software Effort Estimates",
+  "doi": "10.1109/icse43902.2021.00014",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/44.pdf": {
+  "title": "An Empirical Assessment of Global COVID-19 Contact Tracing Applications",
+  "doi": "10.1109/icse43902.2021.00101",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/38.pdf": {
+  "title": "The Software Heritage Filesystem (SwhFS): Integrating Source Code Archival with Development",
+  "doi": "10.1109/icse-companion52605.2021.00032",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 21/9.pdf": {
+  "title": "A large-scale empirical study on Java library migrations: prevalence, trends, and rationales",
+  "doi": "10.1145/3468264.3468571",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/FSE/FSE 19/9.pdf": {
+  "title": "The importance of accounting for real-world labelling when predicting software vulnerabilities",
+  "doi": "10.1145/3338906.3338941",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/27.pdf": {
+  "title": "An integrated bug processing framework",
+  "doi": "10.1109/icse.2012.6227060",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 17/4.pdf": {
+  "title": "Charting the Market Disruptive Nature of Open Source: Experiences from Sony Mobile",
+  "doi": "10.1109/icse-c.2017.110",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/10.pdf": {
+  "title": "To disengage or not to disengage",
+  "doi": "10.1145/3510454.3522685",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/42.pdf": {
+  "title": "Towards training reproducible deep learning models",
+  "doi": "10.1145/3510003.3510163",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 20/27.pdf": {
+  "title": "Gang of eight",
+  "doi": "10.1145/3377811.3380409",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/16.pdf": {
+  "title": "Automated unearthing of dangerous issue reports",
+  "doi": "10.1145/3540250.3549156",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 10/1.pdf": {
+  "title": "The Small Project Observatory: Visualizing software ecosystems",
+  "doi": "10.1016/j.scico.2009.09.004",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.797,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 20/33.pdf": {
+  "title": "Scaling open source communities",
+  "doi": "10.1145/3377811.3380920",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/43.pdf": {
+  "title": "An Empirical Assessment of Global COVID-19 Contact Tracing Applications",
+  "doi": "10.1109/icse43902.2021.00101",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 13/17.pdf": {
+  "title": "Vulnerability of the Day: Concrete demonstrations for software engineering undergraduates",
+  "doi": "10.1109/icse.2013.6606667",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 13/15.pdf": {
+  "title": "Automatic detection of performance deviations in the load testing of Large Scale Systems",
+  "doi": "10.1109/icse.2013.6606651",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/15.pdf": {
+  "title": "Integrated impact analysis for managing software changes",
+  "doi": "10.1109/icse.2012.6227172",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/5.pdf": {
+  "title": "Model-level, platform-independent debugging in the context of the model-driven development of real-time systems",
+  "doi": "10.1145/3106237.3106278",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 11/6.pdf": {
+  "title": "Socio-technical developer networks",
+  "doi": "10.1145/1985793.1985832",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.8,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 09/6.pdf": {
+  "title": "Semantics-based code search",
+  "doi": "10.1109/icse.2009.5070525",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/33.pdf": {
+  "title": "WikiDoMiner: wikipedia domain-specific miner",
+  "doi": "10.1145/3540250.3558916",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/16.pdf": {
+  "title": "Partial models: Towards modeling and reasoning with uncertainty",
+  "doi": "10.1109/icse.2012.6227159",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/18.pdf": {
+  "title": "Automated testing of software that uses machine learning APIs",
+  "doi": "10.1145/3510003.3510068",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 21/4.pdf": {
+  "title": "Lightweight and modular resource leak verification",
+  "doi": "10.1145/3468264.3468576",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/8.pdf": {
+  "title": "Case studies and tools for contract specifications",
+  "doi": "10.1145/2568225.2568285",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/20.pdf": {
+  "title": "Lessons learned managing distributed software engineering courses",
+  "doi": "10.1145/2591062.2591160",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/2.pdf": {
+  "title": "VIATRA Solver: A Framework for the Automated Generation of Consistent Domain-Specific Models",
+  "doi": "10.1109/icse-companion.2019.00034",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 07/5.pdf": {
+  "title": "First International Workshop on Emerging Trends in FLOSS Research and Development-TOC",
+  "doi": "10.1109/floss.2007.8",
+  "method": "crossref_search",
+  "confidence": "medium",
+  "match_score": 0.896,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/6.pdf": {
+  "title": "xLineMapper: A Product Line Feature-Architecture-Implementation Mapping Toolset",
+  "doi": "10.1109/icse-companion.2019.00045",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 11/10.pdf": {
+  "title": "Understanding broadcast based peer review on open source software projects",
+  "doi": "10.1145/1985793.1985867",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 16/23.pdf": {
+  "title": "Disseminating architectural knowledge on open-source projects",
+  "doi": "10.1145/2884781.2884792",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/4.pdf": {
+  "title": "Recovering traceability links between an API and its learning resources",
+  "doi": "10.1109/icse.2012.6227207",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/19.pdf": {
+  "title": "DeepDev-PERF: a deep learning-based approach for improving software performance",
+  "doi": "10.1145/3540250.3549096",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 21/25.pdf": {
+  "title": "Contextualizing toxicity in open source: a qualitative study",
+  "doi": "10.1145/3468264.3473492",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/17.pdf": {
+  "title": "DeepCommenter: a deep code comment generation tool with hybrid lexical and syntactical information",
+  "doi": "10.1145/3368089.3417926",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/5.pdf": {
+  "title": "Accelerating Continuous Integration with Parallel Batch Testing",
+  "doi": "10.1145/3611643.3616255",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 24/i24_37.pdf": {
+  "title": "Empirical Analysis of Vulnerabilities Life Cycle in Golang Ecosystem",
+  "doi": "10.1145/3597503.3639230",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/3.pdf": {
+  "title": "ICCBot: Fragment-Aware and Context-Sensitive ICC Resolution for Android Applications",
+  "doi": "10.1109/icse-companion55297.2022.9793791",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 09/5.pdf": {
+  "title": "License integration patterns: Addressing license mismatches in component-based development",
+  "doi": "10.1109/icse.2009.5070520",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/14.pdf": {
+  "title": "Mining Resource-Operation Knowledge to Support Resource Leak Detection",
+  "doi": "10.1145/3611643.3616315",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 10/7.pdf": {
+  "title": "An exploratory study of the evolution of software licensing",
+  "doi": "10.1145/1806799.1806824",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/24.pdf": {
+  "title": "Bixie: Finding and Understanding Inconsistent Code",
+  "doi": "10.1109/icse.2015.213",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 11/6.pdf": {
+  "title": "Mining development repositories to study the impact of collaboration on software systems",
+  "doi": "10.1145/2025113.2025165",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 13/4.pdf": {
+  "title": "It's not a bug, it's a feature: How misclassification impacts bug prediction",
+  "doi": "10.1109/icse.2013.6606585",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/11.pdf": {
+  "title": "Semi-supervised pre-processing for learning-based traceability framework on real-world software projects",
+  "doi": "10.1145/3540250.3549151",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 16/17.pdf": {
+  "title": "Training the future workforce through task curation in an OSS ecosystem",
+  "doi": "10.1145/2950290.2983984",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/23.pdf": {
+  "title": "Onboarding vs. Diversity, Productivity and Quality \u2014 Empirical Study of the OpenStack Ecosystem",
+  "doi": "10.1109/icse43902.2021.00097",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/9.pdf": {
+  "title": "On the relationship between design discussions and design quality: a case study of Apache projects",
+  "doi": "10.1145/3368089.3409707",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/1.pdf": {
+  "title": "Perceval",
+  "doi": "10.1145/3183440.3183475",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 13/5.pdf": {
+  "title": "Making offline analyses continuous",
+  "doi": "10.1145/2491411.2491460",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/10.pdf": {
+  "title": "File-level vs. module-level regression test selection for .NET",
+  "doi": "10.1145/3106237.3117763",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 08/8.pdf": {
+  "title": "Power through brokering",
+  "doi": "10.1145/1368088.1368201",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.667,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/12.pdf": {
+  "title": "Automated identification of security issues from commit messages and bug reports",
+  "doi": "10.1145/3106237.3117771",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/26.pdf": {
+  "title": "GitHub sponsors",
+  "doi": "10.1145/3510003.3510116",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_20.pdf": {
+  "title": "The Smelly Eight: An Empirical Study on the Prevalence of Code Smells in Quantum Computing",
+  "doi": "10.1109/icse48619.2023.00041",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/25.pdf": {
+  "title": "Improving enterprise software maintenance efficiency through mining software repositories in an industry context",
+  "doi": "10.1145/2591062.2591085",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 04/1.pdf": {
+  "title": "A hybrid architectural style for distributed parallel processing of generic data streams",
+  "doi": "10.1109/icse.2004.1317459",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/27.pdf": {
+  "title": "RESTler: Stateful REST API Fuzzing",
+  "doi": "10.1109/icse.2019.00083",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/7.pdf": {
+  "title": "From Developer Networks to Verified Communities: A Fine-Grained Approach",
+  "doi": "10.1109/icse.2015.73",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/24.pdf": {
+  "title": "TraceLab: An experimental workbench for equipping researchers to innovate, synthesize, and comparatively evaluate traceability solutions",
+  "doi": "10.1109/icse.2012.6227244",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 16/3.pdf": {
+  "title": "Crash consistency validation made easy",
+  "doi": "10.1145/2950290.2950327",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/23.pdf": {
+  "title": "Analysis and Detection of Information Types of Open Source Software Issue Discussions",
+  "doi": "10.1109/icse.2019.00058",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 16/20.pdf": {
+  "title": "Work practices and challenges in pull-based development",
+  "doi": "10.1145/2884781.2884826",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/15.pdf": {
+  "title": "Enhancing Coverage-Guided Fuzzing via Phantom Program",
+  "doi": "10.1145/3611643.3616294",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_15.pdf": {
+  "title": "Evaluating the Impact of Experimental Assumptions in Automated Fault Localization",
+  "doi": "10.1109/icse48619.2023.00025",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 06/2.pdf": {
+  "title": "Estimating LOC for information systems from their conceptual data models",
+  "doi": "10.1145/1134285.1134331",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 14/9.pdf": {
+  "title": "An empirical analysis of flaky tests",
+  "doi": "10.1145/2635868.2635920",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/19.pdf": {
+  "title": "Automated Detection of Client-State Manipulation Vulnerabilities",
+  "doi": "10.1145/2531921",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 24/i24_11.pdf": {
+  "title": "Unveiling Memorization in Code Models",
+  "doi": "10.1145/3597503.3639074",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/8.pdf": {
+  "title": "Heard it through the Gitvine: an empirical study of tool diffusion across the npm ecosystem",
+  "doi": "10.1145/3368089.3409705",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_7.pdf": {
+  "title": "Addressing Performance Regressions in DevOps: Can We Escape from System Performance Testing?",
+  "doi": "10.1109/icse-companion58688.2023.00056",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/19.pdf": {
+  "title": "What Makes a Great Maintainer of Open Source Projects?",
+  "doi": "10.1109/icse43902.2021.00093",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 16/9.pdf": {
+  "title": "Minimizing GUI event traces",
+  "doi": "10.1145/2950290.2950342",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/19.pdf": {
+  "title": "Enabling the Definition and Enforcement of Governance Rules in Open Source Systems",
+  "doi": "10.1109/icse.2015.184",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_11.pdf": {
+  "title": "Skill Recommendation for New Contributors in Open-Source Software",
+  "doi": "10.1109/icse-companion58688.2023.00084",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/29.pdf": {
+  "title": "The co-evolution of socio-technical structures in sustainable software development: Lessons from the open source software communities",
+  "doi": "10.1109/icse.2012.6227030",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 17/17.pdf": {
+  "title": "Feedback-Based Debugging",
+  "doi": "10.1109/icse.2017.43",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/18.pdf": {
+  "title": "Configurations everywhere: implications for testing and debugging in practice",
+  "doi": "10.1145/2591062.2591191",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/7.pdf": {
+  "title": "OASIS: prioritizing static analysis warnings for Android apps based on app user reviews",
+  "doi": "10.1145/3106237.3106294",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/6.pdf": {
+  "title": "A theory of the engagement in open source projects via summer of code programs",
+  "doi": "10.1145/3368089.3409724",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/33.pdf": {
+  "title": "Adding sparkle to social coding",
+  "doi": "10.1145/3180155.3180209",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/44.pdf": {
+  "title": "Large-scale analysis of framework-specific exceptions in Android apps",
+  "doi": "10.1145/3180155.3180222",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/7.pdf": {
+  "title": "Git-Based Integrated Uncertainty Manager",
+  "doi": "10.1109/icse-companion.2019.00047",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 07/4.pdf": {
+  "title": "Modeling the Effect of Size on Defect Proneness for Open-Source Software",
+  "doi": "10.1109/icsecompanion.2007.54",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 20/31.pdf": {
+  "title": "How do companies collaborate in open source ecosystems?",
+  "doi": "10.1145/3377811.3380376",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 16/4.pdf": {
+  "title": "Effort-aware just-in-time defect prediction: simple unsupervised models could be better than supervised models",
+  "doi": "10.1145/2950290.2950353",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/16.pdf": {
+  "title": "Dads: dynamic slicing continuously-running distributed programs with budget constraints",
+  "doi": "10.1145/3368089.3417920",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/6.pdf": {
+  "title": "Are Machine Learning Cloud APIs Used Correctly?",
+  "doi": "10.1109/icse43902.2021.00024",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/56.pdf": {
+  "title": "Empirical study on the discrepancy between performance testing results from virtual and physical environments",
+  "doi": "10.1007/s10664-017-9553-x",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/22.pdf": {
+  "title": "Corporate dominance in open source ecosystems: a case study of OpenStack",
+  "doi": "10.1145/3540250.3549117",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/15.pdf": {
+  "title": "Trivial Compiler Equivalence: A Large Scale Empirical Study of a Simple, Fast and Effective Equivalent Mutant Detection Technique",
+  "doi": "10.1109/icse.2015.103",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/51.pdf": {
+  "title": "\"Was my contribution fairly reviewed?\"",
+  "doi": "10.1145/3180155.3180217",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/28.pdf": {
+  "title": "Bridging the divide between software developers and operators using logs",
+  "doi": "10.1109/icse.2012.6227031",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 12/1.pdf": {
+  "title": "Automated extraction of security policies from natural-language software documents",
+  "doi": "10.1145/2393596.2393608",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.859,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/21.pdf": {
+  "title": "Automatic search term identification for change tasks",
+  "doi": "10.1145/2591062.2591117",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/22.pdf": {
+  "title": "Leaving My Fingerprints: Motivations and Challenges of Contributing to OSS for Social Good",
+  "doi": "10.1109/icse43902.2021.00096",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/9.pdf": {
+  "title": "Proceedings of the 40th International Conference on Software Engineering: Companion Proceeedings",
+  "doi": "10.1145/3183440",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_2.pdf": {
+  "title": "pytest-inline: An Inline Testing Tool for Python",
+  "doi": "10.1109/icse-companion58688.2023.00046",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 15/7.pdf": {
+  "title": "Questions developers ask while diagnosing potential security vulnerabilities with static analysis",
+  "doi": "10.1145/2786805.2786812",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 15/23.pdf": {
+  "title": "Mining Software Repositories for Social Norms",
+  "doi": "10.1109/icse.2015.209",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/11.pdf": {
+  "title": "Integrating adaptive user interface capabilities in enterprise applications",
+  "doi": "10.1145/2568225.2568230",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/13.pdf": {
+  "title": "Automated analysis of CSS rules to support style maintenance",
+  "doi": "10.1109/icse.2012.6227174",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/48.pdf": {
+  "title": "Vulnerability Detection is Just the Beginning",
+  "doi": "10.1109/icse-companion52605.2021.00133",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 14/10.pdf": {
+  "title": "Learning to rank relevant files for bug reports using domain knowledge",
+  "doi": "10.1145/2635868.2635874",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/24.pdf": {
+  "title": "Autotuning\n            <i>PostgreSQL</i>",
+  "doi": "10.1145/3183440.3195045",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.609,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/34.pdf": {
+  "title": "On Indirectly Dependent Documentation in the Context of Code Evolution: A Study",
+  "doi": "10.1109/icse43902.2021.00134",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/14.pdf": {
+  "title": "RGSE: a regular property guided symbolic executor for Java",
+  "doi": "10.1145/3106237.3122830",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 21/26.pdf": {
+  "title": "Mitigating security attacks in kubernetes manifests for security best practices violation",
+  "doi": "10.1145/3468264.3473495",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/10.pdf": {
+  "title": "Spotting working code examples",
+  "doi": "10.1145/2568225.2568292",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/24.pdf": {
+  "title": "Enhancing developers\u2019 support on pull requests activities with software bots",
+  "doi": "10.1145/3368089.3418539",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/14.pdf": {
+  "title": "Software documentation and augmented reality: love or arranged marriage?",
+  "doi": "10.1145/3368089.3417044",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 12/2.pdf": {
+  "title": "Who is going to mentor newcomers in open source projects?",
+  "doi": "10.1145/2393596.2393647",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/41.pdf": {
+  "title": "To distribute or not to distribute?",
+  "doi": "10.1145/3180155.3180221",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 14/8.pdf": {
+  "title": "Focus-shifting patterns of OSS developers and their congruence with call graphs",
+  "doi": "10.1145/2635868.2635914",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 18/10.pdf": {
+  "title": "Software engineering collaboratories (SEClabs) and collaboratories as a service (CaaS)",
+  "doi": "10.1145/3236024.3264839",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/5.pdf": {
+  "title": "SOAR: A Synthesis Approach for Data Science API Refactoring",
+  "doi": "10.1109/icse43902.2021.00023",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/9.pdf": {
+  "title": "Regression test selection across JVM boundaries",
+  "doi": "10.1145/3106237.3106297",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/21.pdf": {
+  "title": "Conflict-aware inference of python compatible runtime environments with domain knowledge graph",
+  "doi": "10.1145/3510003.3510078",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 17/13.pdf": {
+  "title": "Applying deep learning based automatic bug triager to industrial projects",
+  "doi": "10.1145/3106237.3117776",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 22/29.pdf": {
+  "title": "Inferring and applying type changes",
+  "doi": "10.1145/3510003.3510115",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/i23_28.pdf": {
+  "title": "Silent Vulnerable Dependency Alert Prediction with Vulnerability Key Aspect Explanation",
+  "doi": "10.1109/icse48619.2023.00089",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/9.pdf": {
+  "title": "Release Synchronization in Software Ecosystems",
+  "doi": "10.1109/icse-companion.2019.00058",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/26.pdf": {
+  "title": "Industry practice of configuration auto-tuning for cloud applications and services",
+  "doi": "10.1145/3540250.3558962",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 21/10.pdf": {
+  "title": "An automatic refactoring framework for replacing test-production inheritance by mocking mechanism",
+  "doi": "10.1145/3468264.3468590",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 17/3.pdf": {
+  "title": "Automatic Categorization with Deep Neural Network for Open-Source Java Projects",
+  "doi": "10.1109/icse-c.2017.118",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 17/18.pdf": {
+  "title": "Learning Syntactic Program Transformations from Examples",
+  "doi": "10.1109/icse.2017.44",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 06/7.pdf": {
+  "title": "An empirical study on decision making in off-the-shelf component-based development",
+  "doi": "10.1145/1134285.1134446",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 0.794,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 07/10.pdf": {
+  "title": "Predicting faults from cached history",
+  "doi": "10.1145/1342211.1342216",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/FSE/FSE 19/13.pdf": {
+  "title": "CloneCognition: machine learning based code clone validation tool",
+  "doi": "10.1145/3338906.3341182",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 16/22.pdf": {
+  "title": "Validate your SPDX files for open source license violations",
+  "doi": "10.1145/2950290.2983939",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 20/37.pdf": {
+  "title": "A large-scale empirical study on vulnerability distribution within projects and the lessons learned",
+  "doi": "10.1145/3377811.3380923",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/2.pdf": {
+  "title": "Do CONTRIBUTING Files Provide Information about OSS Newcomers\u2019 Onboarding Barriers?",
+  "doi": "10.1145/3611643.3616288",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/22.pdf": {
+  "title": "Software Architecture Recovery with Information Fusion",
+  "doi": "10.1145/3611643.3616285",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 24/i24_31.pdf": {
+  "title": "How Are Paid and Volunteer Open Source Developers Different? A Study of the Rust Project",
+  "doi": "10.1145/3597503.3639197",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/33.pdf": {
+  "title": "Impact of Code Language Models on Automated Program Repair",
+  "doi": "10.1109/icse48619.2023.00125",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 15/16.pdf": {
+  "title": "GitSonifier: using sound to portray developer conflict history",
+  "doi": "10.1145/2786805.2803199",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 06/4.pdf": {
+  "title": "Computer Science and Engineering",
+  "doi": "10.26693/cse",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": false
+ },
+ "data/paper-set/infer-set/FSE/FSE 20/13.pdf": {
+  "title": "Exempla gratis (E.G.): code examples for free",
+  "doi": "10.1145/3368089.3417052",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/1.pdf": {
+  "title": "Performance regression testing target prioritization via performance risk analysis",
+  "doi": "10.1145/2568225.2568232",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 24/i24_28.pdf": {
+  "title": "Uncovering the Causes of Emotions in Software Developer Communication Using Zero-shot LLMs",
+  "doi": "10.1145/3597503.3639223",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 13/10.pdf": {
+  "title": "Cassandra: Proactive conflict minimization through optimized task scheduling",
+  "doi": "10.1109/icse.2013.6606619",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 16/5.pdf": {
+  "title": "How do free/open source developers pick their tools?",
+  "doi": "10.1145/2889160.2889248",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 14/13.pdf": {
+  "title": "Design rule spaces: a new form of architecture insight",
+  "doi": "10.1145/2568225.2568241",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 12/5.pdf": {
+  "title": "Generating range fixes for software configuration",
+  "doi": "10.1109/icse.2012.6227206",
+  "method": "crossref_search",
+  "confidence": "high",
+  "match_score": 1.0,
+  "author_corroborated": true
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 23/31.pdf": {
+  "title": "Learning to Boost Disjunctive Static Bug-Finders",
+  "doi": "10.1109/icse48619.2023.00099",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 21/10.pdf": {
+  "title": "An Evolutionary Study of Configuration Design and Implementation in Cloud Systems",
+  "doi": "10.1109/icse43902.2021.00029",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/5.pdf": {
+  "title": "Understanding skills for OSS communities on GitHub",
+  "doi": "10.1145/3540250.3549082",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 22/29.pdf": {
+  "title": "Proceedings of the 30th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering",
+  "doi": "10.1145/3540250",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 18/34.pdf": {
+  "title": "Proceedings of the 40th International Conference on Software Engineering",
+  "doi": "10.1145/3180155",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/33.pdf": {
+  "title": "Why Does Code Review Work for Open Source Software Communities?",
+  "doi": "10.1109/icse.2019.00111",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/FSE/FSE 23/23.pdf": {
+  "title": "Mate! Are You Really Aware? An Explainability-Guided Testing Framework for Robustness of Malware Detectors",
+  "doi": "10.1145/3611643.3616309",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ },
+ "data/paper-set/infer-set/ICSE/ICSE 19/28.pdf": {
+  "title": "The List is the Process: Reliable Pre-Integration Tracking of Commits on Mailing Lists",
+  "doi": "10.1109/icse.2019.00088",
+  "method": "page_doi+crossref_verify",
+  "confidence": "high"
+ }
+}
